@@ -1,0 +1,35 @@
+!    -*- f90 -*-
+! Note: the context of this file is case sensitive.
+
+python module qSDHC ! in 
+    interface  ! in :qSDHC
+        subroutine cpf(x,y,wr,wi) ! in :qSDHC:CPF.for
+            double precision :: x
+            double precision :: y
+            double precision :: wr
+            double precision :: wi
+        end subroutine cpf
+        subroutine cpf3(x,y,wr,wi) ! in :qSDHC:CPF3.for
+            double precision :: x
+            double precision :: y
+            double precision :: wr
+            double precision :: wi
+        end subroutine cpf3
+        subroutine qsdhc(sg0,gamd,gam0,gam2,shift0,shift2,anuvc,sg,ls_qsdhc_r,ls_qsdhc_i) ! in :qSDHC:qSDHC.for
+            double precision,intent(in) :: sg0
+            double precision,intent(in) :: gamd
+            double precision,intent(in) :: gam0
+            double precision,intent(in) :: gam2
+            double precision,intent(in) :: shift0
+            double precision,intent(in) :: shift2
+            double precision,intent(in) :: anuvc
+            double precision,intent(in) :: sg
+            double precision,intent(in,out) :: ls_qsdhc_r
+            double precision,intent(in,out) :: ls_qsdhc_i
+        end subroutine qsdhc
+    end interface 
+end python module qSDHC
+
+! This file was auto-generated with f2py (version:1.22.3).
+! See:
+! https://web.archive.org/web/20140822061353/http://cens.ioc.ee/projects/f2py2e
