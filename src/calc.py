@@ -97,7 +97,7 @@ def calc_voigt(pressure, temperature, mass, mole_fraction, xcal, linelist, vnu, 
         
         lim0, lim1 = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu)
 
-        voigt = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0], doppler_width, lorentz_width, 0.0, shift) * linelist["intensity"][i][0]
+        voigt = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, 0.0, shift) * linelist["intensity"][i][0]
 
         sigma[lim0:lim1] += voigt
 
@@ -121,7 +121,7 @@ def calc_rautian(pressure, temperature, mass, mole_fraction, xcal, linelist, vnu
         
         lim0, lim1 = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu)
 
-        rau = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0], doppler_width, lorentz_width, narrowing, shift) * linelist["intensity"][i][0]
+        rau = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, narrowing, shift) * linelist["intensity"][i][0]
 
         sigma[lim0:lim1] += rau
 
