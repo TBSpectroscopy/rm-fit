@@ -27,11 +27,7 @@ Compilation
     cd rm-fit/src
     ```
 
-3. Locate pybind11 in your system (depends on installation method) and replace it in `CMakelist.txt` line 4.
-
-    `set(pybind11_DIR /usr/include/pybind11)` -> `set(pybind11_DIR [your_pybind11_location])`
-
-4. Compile the Fortran and C++ libraries
+3. Compile the Fortran and C++ libraries
     ```
     python -m numpy.f2py -c qSDHC.pyf qSDHC.for CPF3.for CPF.for --f90flags="-Ofast"
     python -m numpy.f2py -c qSDV.pyf qSDV.for CPF3.for CPF.for --f90flags="-Ofast"

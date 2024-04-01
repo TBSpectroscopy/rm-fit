@@ -52,12 +52,10 @@ def msfp(control_file, option):
 
     
     specs = [np.array([], dtype = np.double), np.array([], dtype = np.double)]  # [all wavenumbers, all irradiances]
-    specss = []
     nu = np.array([], dtype = np.double)
     for i in range(0, len(spectral_data["spectra"]), 1):
         spec = opus.readOpus(spectral_data["spectra"][i]["spectrum"], spectral_data["calculation"]["range"])
         nu = spec[0]
-        specss.append(spec[1])
         specs[0] = np.concatenate((specs[0], spec[0]), axis = None)
         specs[1] = np.concatenate((specs[1], spec[1]), axis = None)
 
@@ -90,7 +88,7 @@ def msfp(control_file, option):
         spec_filename = "{}_spectra.txt".format(os.path.splitext(spectral_data["calculation"]["output_path"])[0])
         with open(spec_filename, "w") as f:
             for i in range(0, len(specs[0]), 1):
-                f.write("{:18.10f}{:18.10f}{:13.3E}{:17.7E}{:17.7E}{:17.7E}\n".format(specs[0][i], specs[0][i], 0.0, specs[1][i], y_calc[i], -y_resid[i]))
+                f.write("{:18.10f}{:17.7E}{:17.7E}{:17.7E}\n".format(specs[0][i], specs[1][i], y_calc[i], -y_resid[i]))
 
         return
 
@@ -99,18 +97,11 @@ def msfp(control_file, option):
         y_calc = np.array([])
         for i in range(0, len(spectral_data["spectra"]), 1):
             y_calc = np.concatenate((y_calc, fit.recalc_spectrum(params, i, specs, params_id, len(spectral_fit), spectral_data, linelists, offdiags)), axis = None)
-        print(time.time() - starttime)
 
-        fig, (spec, diff) = plt.subplots(nrows = 2, ncols = 1, sharex = True)
-        for i in range(0, len(spectral_data["spectra"]), 1):
-            spec.plot(nu, specss[i], color = "k")
-            spec.plot(nu, y_calc[(len(nu) * i) : (len(nu) * (i+1))], label = spectral_data["spectra"][i]["spectrum"])
-            diff.plot(nu, specss[i] - y_calc[(len(nu) * i) : (len(nu) * (i+1))])
-
-        diff.set_ylabel("Obs. $-$ calc.")
-        diff.set_xlabel("Wavenumber / cm$^{-1}$")
-        spec.legend(fancybox = False, edgecolor = "none", framealpha = 0.8)
-        plt.show()
+        spec_filename = "{}_spectra.txt".format(os.path.splitext(spectral_data["calculation"]["output_path"])[0])
+        with open(spec_filename, "w") as f:
+            for i in range(0, len(specs[0]), 1):
+                f.write("{:18.10f}{:17.7E}{:17.7E}{:17.7E}\n".format(specs[0][i], specs[1][i], y_calc[i], specs[1][i] - y_calc[i]))
 
 
     return

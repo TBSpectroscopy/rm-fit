@@ -36,3 +36,4 @@ line_profile = qsd_rautian          % voigt/rautian/galatry/qsd_voigt/qsd_rautia
 method = general                    % general/correlation | Used for the line mixing calculation. "correlation" uses the line mixing inside the correlation matrix and considers a diagonal relaxation matrix
 x_calibration_factor = 7.47E-7c     % (1 + x_calibration_factor) * wavenumber scale
 output_path = ../results/3057_7     % output files path
+

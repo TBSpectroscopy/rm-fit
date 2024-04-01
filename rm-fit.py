@@ -3,9 +3,9 @@ import sys
 import datetime
 import src.msfp as msfp
 
-print("msfp.py")
+print("RM-Fit")
 if len(sys.argv) == 1 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
-    print("Usage: msfp [OPTION] [FILE]\n"\
+    print("Usage: python rm-fit.py [OPTION] [FILE]\n"\
             "Options:\n"\
             "   -h, --help      Print this help text and exit\n"\
             "   -c              Calculate spectra using given parameters\n"\
