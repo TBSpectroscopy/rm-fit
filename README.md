@@ -12,7 +12,8 @@ Compilation
 - gcc/g++/gfortran
 - CMake
 - [pybind11](https://github.com/pybind/pybind11)
-- numpy
+- meson-python
+- NumPy
 - [Eigen](https://eigen.tuxfamily.org)
 
 ### Instructions
@@ -55,8 +56,8 @@ python rm-fit.py [option] [input_file]
 ### Dependencies
 
 - python 3
-- numpy
-- scipy
+- NumPy
+- SciPy
 
 ### Input
 

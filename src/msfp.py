@@ -19,7 +19,6 @@ import fit
 import output
 import numpy as np
 import scipy.optimize as optimize
-import matplotlib.pyplot as plt
 import time
 
 def msfp(control_file, option):
