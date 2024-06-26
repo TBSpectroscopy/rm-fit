@@ -9,11 +9,11 @@ Compilation
 -----------
 ### Dependencies
 
-- gcc/g++/gfortran
-- CMake
+- [gcc/g++/gfortran](https://gcc.gnu.org/)
+- [CMake](https://cmake.org/)
 - [pybind11](https://github.com/pybind/pybind11)
-- meson-python
-- NumPy
+- [meson](https://mesonbuild.com/)
+- [NumPy](https://numpy.org/)
 - [Eigen](https://eigen.tuxfamily.org)
 
 ### Instructions
@@ -70,3 +70,12 @@ An example is provided in `data/input/` named `ch4_co2.txt`. The input file cont
 `$CALCULATION` contains the information used for all spectra and the output path. Unique
 
  Initial parameters are followed by an 'f' if you want to fit them, or 'c' if you want them to stay constant. The parameters inside the blocks are detailed in the example file.
+
+ ### Citation
+
+ Please cite this work if you use this software:
+
+ https://www.sciencedirect.com/science/article/abs/pii/S0022407324001766
+
+T. Bertin and J. Vander Auwera, “CO2 collision-induced line parameters for the ν3 band of 12CH4 measured using a hard-collision speed-dependent line shape and the relaxation matrix formalism,” Journal of Quantitative Spectroscopy and Radiative Transfer, vol. 324, p. 109069, Sep. 2024, doi: 10.1016/j.jqsrt.2024.109069.
+
