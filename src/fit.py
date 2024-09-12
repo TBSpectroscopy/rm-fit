@@ -159,7 +159,7 @@ def update_parameters(params, *args, unc = []):
     spectral_data = args[3]
     linelists = args[4]
     offdiags = args[5]
-    if unc == []:
+    if len(unc) == 0:
         unc = [0.0] * len(params)
 
 

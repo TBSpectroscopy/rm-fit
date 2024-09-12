@@ -16,6 +16,25 @@ import numpy as np
 import math
 
 
+def readSpectrum(spec_file, nu_range):
+    with open(spec_file, mode = "rb") as f:
+        sign = f.read(4)
+    if sign == b"\x0A\x0A\xFE\xFE":
+        return readOpus(spec_file, nu_range)
+    else:
+        with open(spec_file) as f:
+            split = f.readline().split()
+            try:
+                float(split[0])
+                float(split[1])
+            except:
+                print("Error: \"{}\" Unrecognized spectrum file type\nOnly Opus and text files are allowed\n\nText files must contain 1 column for the wavenumber, and one for the transmittance. The columns must be separated by spaces/tab's".format(spec_file))
+                sys.exit(1)
+
+        return readAscii(spec_file, nu_range)
+
+
+
 def readOpus(opus_file, nu_range):
     f = open(opus_file, mode = "rb")
     opus = f.read()
@@ -63,4 +82,16 @@ def readOpus(opus_file, nu_range):
 
     return arr
 
+
+def readAscii(ascii_file, nu_range):
+    x = []
+    y = []
+    with open(ascii_file) as f:
+        for line in f:
+            split = line.split()
+            if nu_range[0] <= float(split[0]) <= nu_range[1]:
+                x.append(float(split[0]))
+                y.append(float(split[1]))
+
+    return [np.array(x), np.array(y)]
 

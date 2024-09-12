@@ -53,7 +53,7 @@ def msfp(control_file, option):
     specs = [np.array([], dtype = np.double), np.array([], dtype = np.double)]  # [all wavenumbers, all irradiances]
     nu = np.array([], dtype = np.double)
     for i in range(0, len(spectral_data["spectra"]), 1):
-        spec = opus.readOpus(spectral_data["spectra"][i]["spectrum"], spectral_data["calculation"]["range"])
+        spec = opus.readSpectrum(spectral_data["spectra"][i]["spectrum"], spectral_data["calculation"]["range"])
         nu = spec[0]
         specs[0] = np.concatenate((specs[0], spec[0]), axis = None)
         specs[1] = np.concatenate((specs[1], spec[1]), axis = None)
