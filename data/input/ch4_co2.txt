@@ -3,7 +3,7 @@ Control the behavior of RM-Fit
 (ignores what follows '%')
 
 $SPECTRUM #1
-file = ../spectra/jvda2629_z4_tr.1                              % only supports text files or Opus absorption spectra (transmittance or single beam) at the moment
+file = ../spectra/ch4_co2_spec.txt                              % only supports text files or Opus absorption spectra (transmittance or single beam) at the moment
 baseline = 0.998739093f -0.0000354303092f -2.93788445e-06f      % each parameter is a polynomial coefficient starting from order 0: a + bx + cx^2 + ...
 lowest_value = 0.0001                                           % threshold from which the line is not calculated anymore (1 - transmittance)
 mole_fraction = 0.00293410399f : 1 2 / 7.718683968E-05c : 3     % mole_fraction : linelists# / mole_fraction : linelists# | 3 is used as an example, linelist # 3 is not included
@@ -33,7 +33,7 @@ $CALCULATION
 spectra_considered = 1              % indices of the $SPECTRUM blocks (does not depend on what is written after $SPECTRUM)
 range = 3052.7 3062.3               % min max in wavenumber
 line_profile = qsd_rautian          % voigt/rautian/galatry/qsd_voigt/qsd_rautian
-method = general                    % general/correlation | Used for the line mixing calculation. "correlation" uses the line mixing inside the correlation matrix and considers a diagonal relaxation matrix
+method = general                    % general/correlation | Used for the line mixing calculation. "correlation" moves the line mixing inside the correlation matrix and considers a diagonal relaxation matrix
 x_calibration_factor = 7.47E-7c     % (1 + x_calibration_factor) * wavenumber scale
 output_path = ../results/3057_7     % output files path
 
