@@ -1,20 +1,10 @@
-$MSFP_PEAKLIST_v6
-Written: 7 Jun 2021, 2h54
----------------------------
-
 $HEADER
  Mass.....................: 16.031 g/mol
  Temperature..............: 296.00 K
- Partition function.......: 
- Number of lines..........: 
- Type of rotor............:
- Line mixing included.....: 
- Temperature dependence...: 
+ Line mixing included.....: Not supported
+ Temperature dependence...: Not supported
  Sample...................: mixture
  Mass Perturbing..........: 44.010 g/mol 
-
-
-
 
 
 $LINE_PARAMETERS

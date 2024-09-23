@@ -102,6 +102,8 @@ def msfp(control_file, option):
             for i in range(0, len(specs[0]), 1):
                 f.write("{:18.10f}{:17.7E}{:17.7E}{:17.7E}\n".format(specs[0][i], specs[1][i], y_calc[i], specs[1][i] - y_calc[i]))
 
+    else:
+        print("ERROR: unrecognized option \"{}\"\nTry \"python rm-fit -h\" or \"python rm-fit --help\" for more information".format(option))
 
     return
 

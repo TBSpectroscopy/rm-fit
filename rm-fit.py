@@ -14,8 +14,7 @@ if len(sys.argv) == 1 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
 
 print("Run time: {}".format(datetime.datetime.now().isoformat(sep = " ", timespec="minutes")))
 if len(sys.argv) == 2 :
-    print("ERROR - Missing argument: the path (relative to the directory containing " \
-        "\"msfp.py\") to a \"control file\" must be provided")
+    print("ERROR - Missing argument: option and  path to an input file must be provided\n\nTry \"python rm-fit -h\" or \"python rm-fit --help\" for more information")
     sys.exit()
 inpdir = os.path.dirname(sys.argv[2])
 inppath = os.path.basename(sys.argv[2])

@@ -38,7 +38,11 @@ def get_lines(linelist_file, spec_range):
         for x, line in enumerate(f):
             if line.startswith("$LINE_PARAMETERS"):
                 startx = x+2
+                break
 
+    if startx == 0:
+        print("ERROR: linelist \"{}\" does not contain \"$LINE_PARAMETERS\" block")
+        sys.exit()
     with open(linelist_file) as f:
         mix = False
         for x, line in enumerate(f):
@@ -49,15 +53,15 @@ def get_lines(linelist_file, spec_range):
                     mix = (line.split()[1] == "mixture")
                 elif "Mass Perturbing..........:" in line:
                     mass_perturbing = float(line.split()[2])
-            #elif x == 10:
-            #    if profile.upper() != line.split()[2].upper():
-            #        print("ERROR: Linelist \"{}\" profile does not match control file\n"\
-            #                "Expected \"{}\", provided \"{}\"".format(linelist_file, profile.lower(), line.split()[2].lower()))
-            #        return par
             elif x >= startx:
                 if spec_range[0] < float(line[13:26]) < spec_range[1]:
-                    #if profile == "qsd_rautian":
                     read_linelist(par, line, mix)
+    if mass <= 0.0:
+        print("ERROR: absorber mass not provided")
+        sys.exit()
+    if mix and mass_perturbing <= 0.0:
+        print("ERROR: perturber mass not provided")
+        sys.exit()
 
     return par, mass, mass_perturbing
 
