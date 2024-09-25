@@ -349,10 +349,11 @@ def calc_spectrum(spectral_data, spectrum_index, linelists, offdiags, nu):
 
 
     transmittance = generate_transmittance(alpha, spectral_data["spectra"][spectrum_index]["path_length"])
-    ils = generate_ILS(spectral_data["spectra"][spectrum_index]["ils_type"][1], nu[int(nu.size / 2)], nu)
-    transmittance = np.concatenate(([transmittance[0]]*int(len(ils)/2), transmittance), axis = None)
-    transmittance = np.concatenate((transmittance, [transmittance[-1]]*int(len(ils)/2)), axis = None)
-    transmittance = signal.fftconvolve(transmittance, ils, mode = "valid") * ((nu[-1] - nu[0]) / (len(nu) - 1))
+    if spectral_data["spectra"][spectrum_index]["ils_type"][0] == "external":
+        ils = get_ILS(spectral_data["spectra"][spectrum_index]["ils_type"][1], nu[int(nu.size / 2)], nu)
+        transmittance = np.concatenate(([transmittance[0]]*int(len(ils)/2), transmittance), axis = None)
+        transmittance = np.concatenate((transmittance, [transmittance[-1]]*int(len(ils)/2)), axis = None)
+        transmittance = signal.fftconvolve(transmittance, ils, mode = "valid") * ((nu[-1] - nu[0]) / (len(nu) - 1))
     transmittance *= calc_baseline(spectral_data["spectra"][spectrum_index]["baseline"], nu)
 
     return transmittance.real
@@ -454,32 +455,23 @@ def generate_W_diag(molfrac, press, n_nu0, m, mp, linelist, offdiag, popu, u, sd
 #-------------------------------------------------------------------------------------------------
 # Create ILS
 
-def generate_ILS(ils_file, nu0, nu):
-
-    polynu0 = []
-    general = dict()
+def get_ILS(ils_file, nu0, nu):
+    domain = ""
     par = dict()
-    modeffs = []
-    phases = []
-    data = {"wavenumber": [], "opd": [], "modeff": modeffs, "phase": phases}
-
+    datablock = False
     with open(ils_file) as f:
-        count = -1
-        blocktype = "none"
+        blocktype = ""
         for x, line in enumerate(f):
             if line.startswith("$GENERAL"):
                 blocktype = "general"
             elif line.startswith("$PARAMETERS"):
                 blocktype = "parameters"
             elif line.startswith("$DATA"):
-                blocktype = "data"
-                count += 1
-                data["opd"].append([])
-                modeffs.append([])
-                phases.append([])
+                datablock = True
+                break
             elif blocktype == "general":
                 if line.startswith("domain ="):
-                    general["domain"] = ctrl_pars.get_parameter(x, line)
+                    domain = ctrl_pars.get_parameter(x, line)
             elif blocktype == "parameters":
                 if line.startswith("ft_exponent_sign"):
                     par["ft_exponent_sign"] = ctrl_pars.get_parameter(x, line)
@@ -493,33 +485,64 @@ def generate_ILS(ils_file, nu0, nu):
                     par["ils_size"] = float(ctrl_pars.get_parameter(x, line))
                 elif line.startswith("igm_interpolation"):
                     par["igm_interpolation"] = ctrl_pars.get_parameter(x, line)
+                elif line.startswith("mopd"):
+                    par["mopd"] = float(ctrl_pars.get_parameter(x, line))
+    if domain.lower() == "time" or domain.lower() == "opd" or not datablock:
+        return calc_ILS_time(ils_file, nu0, nu, par)
+    elif (domain.lower() == "frequency" or domain.lower() == "wavenumber") and datablock:
+        return calc_ILS_frequency(ils_file, nu0, nu, par)
+    else:
+        print("ERROR: unrecognized ILS domain\n\nAccepted domains are: \"time\", \"opd\", \"frequency\", or \"wavenumber\"")
+        sys.exit()
+
+# ILS from modulation
+def calc_ILS_time(ils_file, nu0, nu, par):
+
+    polynu0 = []
+    modeffs = []
+    phases = []
+    data = {"wavenumber": [], "opd": [], "modeff": modeffs, "phase": phases}
+
+    with open(ils_file) as f:
+        count = -1
+        blocktype = "none"
+        for x, line in enumerate(f):
+            if line.startswith("$DATA"):
+                blocktype = "data"
+                count += 1
+                data["opd"].append([])
+                modeffs.append([])
+                phases.append([])
             elif blocktype == "data":
                 if line.startswith("wavenumber ="):
                     data["wavenumber"].append(float(ctrl_pars.get_parameter(x, line)))
                 elif not line.startswith("%") and len(line.strip()) != 0:
                     data["opd"][count].append(float(line[0:10]))
-                    modeffs[count].append(float(line[10:21]))
-                    phases[count].append(float(line[21:32]))
+                    modeffs[count].append(float(line.split()[1]))
+                    phases[count].append(float(line.split()[2]))
 
 
-    modeff = []
-    phase = []
-    A = np.ones((len(data["wavenumber"]), par["polynomial_order"] + 1), dtype = np.double)
-    B = np.ones((1, par["polynomial_order"] + 1), dtype = np.double)
-    for i in range(0, A.shape[0], 1):
-        for j in range(0, A.shape[1], 1):
-            A[i][j] = data["wavenumber"][i]**j
-    for i in range(0, B.shape[1], 1):
-        B[0][i] = nu0**i
+    if len(modeffs) > 0:
+        modeff = []
+        phase = []
+        A = np.ones((len(data["wavenumber"]), par["polynomial_order"] + 1), dtype = np.double)
+        B = np.ones((1, par["polynomial_order"] + 1), dtype = np.double)
+        for i in range(0, A.shape[0], 1):
+            for j in range(0, A.shape[1], 1):
+                A[i][j] = data["wavenumber"][i]**j
+        for i in range(0, B.shape[1], 1):
+            B[0][i] = nu0**i
 
-    opd = data["opd"][0]
-    for i in range(0, len(opd), 1):
-        yr = np.array([modeffs[j][i] for j in range(0, len(data["wavenumber"]), 1)])
-        yi = np.array([phases[j][i] for j in range(0, len(data["wavenumber"]), 1)])
-        polyparrs = np.linalg.lstsq(A, yr, rcond = 1E-15)[0]
-        polyparis = np.linalg.lstsq(A, yi, rcond = 1E-15)[0]
-        modeff.append(np.matmul(B, polyparrs)[0])
-        phase.append(np.matmul(B, polyparis)[0])
+        opd = data["opd"][0]
+        for i in range(0, len(opd), 1):
+            yr = np.array([modeffs[j][i] for j in range(0, len(data["wavenumber"]), 1)])
+            yi = np.array([phases[j][i] for j in range(0, len(data["wavenumber"]), 1)])
+            polyparrs = np.linalg.lstsq(A, yr, rcond = 1E-15)[0]
+            polyparis = np.linalg.lstsq(A, yi, rcond = 1E-15)[0]
+            modeff.append(np.matmul(B, polyparrs)[0])
+            phase.append(np.matmul(B, polyparis)[0])
+    else:
+        opd = [par["mopd"]]
 
     nu_inter = (nu[-1] - nu[0])/(len(nu) - 1)   # Interval between each nu[i]
     n_opd = int((2 * int(par["ils_size"] / nu_inter)) + 1)  # Number of points for the ILS
@@ -527,14 +550,18 @@ def generate_ILS(ils_file, nu0, nu):
 
     opd_max = 1/(2*nu_inter)
     opd_inter = 1/(2*nu_max)
-
-    interplotr = interpolate.interp1d(opd, modeff, kind = "cubic")
-    interploti = interpolate.interp1d(opd, phase, kind = "cubic")
     n_mopd = int((opd[-1]/opd_inter) + 1)    # Number of points up to MOPD
     mopd = (n_mopd - 1) * opd_inter # Nearest point to MOPD
-    opd = np.linspace(0, mopd, n_mopd)  # OPD using right interval
-    modeff = interplotr(opd)
-    phase = interploti(opd)
+
+    if len(modeffs) > 0:
+        interplotr = interpolate.interp1d(opd, modeff, kind = "cubic")
+        interploti = interpolate.interp1d(opd, phase, kind = "cubic")
+        opd = np.linspace(0, mopd, n_mopd)  # OPD using right interval
+        modeff = interplotr(opd)
+        phase = interploti(opd)
+    else:
+        modeff = [1.0] * n_mopd
+        phase = [0.0] * n_mopd
 
     opd = np.linspace(-opd_max, opd_max, n_opd)
     modulation = [0 + 0j] * n_opd
@@ -546,14 +573,11 @@ def generate_ILS(ils_file, nu0, nu):
         modulation[int(n_opd/2) - i] = modeff[i] * (1 + 1j * np.tan(-phase[i]))
     modulation = np.array(modulation)
 
-    #plt.figure(1)
-    #plt.plot(opd, modulation)
-    #plt.xlim(-300, 300)
 
     ils = np.fft.fftshift(np.fft.fft(np.fft.ifftshift(modulation * fils))) * opd_inter
     nu = np.linspace(-nu_max, nu_max, n_opd)
     # wavelength cos(ax) = 2pi/a
-    wavelength = 2/(2*data["opd"][0][-1])
+    wavelength = 2/(2*mopd)
     # if cos bell starts at nu[-1] - wavelength: (cos((2pi * nu /wavelength) + (pi * (nu[-1] - wavelength/2)) + 1) / 2
     for i in range(0, len(nu), 1):
         if nu[i] >= nu_max - (wavelength / 2):
@@ -566,9 +590,54 @@ def generate_ILS(ils_file, nu0, nu):
         area += (ils[i] + ils[i+1]).real * nu_inter / 2
     ils /= area
 
-    #plt.figure(2)
-    #plt.plot(nu, ils)
-    #plt.show()
+
+    return ils
+
+
+# Pre-calculated ILS
+def calc_ILS_frequency(ils_file, nu0, nu, par):
+
+    polynu0 = []
+    modeffs = []
+    phases = []
+    nuilss = []
+    ilss = []
+    data = {"wavenumber": [], "nu": nuilss, "ils": ilss}
+
+    with open(ils_file) as f:
+        count = -1
+        blocktype = "none"
+        for x, line in enumerate(f):
+            if line.startswith("$DATA"):
+                blocktype = "data"
+                count += 1
+                nuilss.append([])
+                ilss.append([])
+            elif blocktype == "data":
+                if line.startswith("wavenumber ="):
+                    data["wavenumber"].append(float(ctrl_pars.get_parameter(x, line)))
+                elif not line.startswith("%") and len(line.strip()) != 0:
+                    nuilss[count].append(float(line.split()[0]))
+                    ilss[count].append(float(line.split()[1]))
+
+
+    nudiff = [abs(nu0 - i) for i in data["wavenumber"]]
+    ilsindex = np.argmin(nudiff)
+
+    nu_inter = (nu[-1] - nu[0])/(len(nu) - 1)   # Interval between each nu[i]
+    if "ils_size" in par and par["ils_size"] < min(abs(nuilss[ilsindex][0]), abs(nuilss[ilsindex][-1])):
+        n_opd = int((2 * int(par["ils_size"] / nu_inter)) + 1)  # Number of points for the ILS
+        nu_max = nu_inter * (((n_opd + 1)/2) - 1)   # Nu_max of the ILS
+    else:
+        par["ils_size"] = min(abs(nuilss[ilsindex][0]), abs(nuilss[ilsindex][-1]))
+        n_opd = int((2 * int(par["ils_size"] / nu_inter)) + 1)  # Number of points for the ILS
+        nu_max = nu_inter * (((n_opd + 1)/2) - 1)   # Nu_max of the ILS
+
+    nu = np.linspace(-nu_max, nu_max, n_opd)
+
+    interplot = interpolate.interp1d(nuilss[ilsindex], ilss[ilsindex], kind = "cubic")
+    ils = interplot(nu)
+
 
     return ils
 

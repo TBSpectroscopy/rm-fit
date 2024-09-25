@@ -1,16 +1,16 @@
-$ILS_v2
-
 $GENERAL
-domain = time
+domain = time           % time/opd/frequency/wavenumber
 
 $PARAMETERS
 ft_exponent_sign = negative
-polynomial_order = 1
-iris_diameter = 1.15
-focal_length = 418
-ils_size = 10
+polynomial_order = 1                % order of the interpolation polynomial
+iris_diameter = 1.15                % in cm
+focal_length = 418                  % in mm
+ils_size = 10                       % in cm-1
 igm_interpolation = 2
+mopd = 150                          % in cm | Only used when no $DATA is supplied
 
+% If ideal ILS is desired, remove everything from here
 $DATA
 wavenumber = 2568.40
 %      OPD    MOD_EFF      PHASE

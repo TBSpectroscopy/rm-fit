@@ -139,8 +139,8 @@ def get_parameter(i, line):
         line = line.split("%")[0]
     list = line.split('=')
     if len(list) != 2:
-        print("\nERROR - Incomplete field '{}' at line no. {}".format(line, i + 1))
-        raise IndexError
+        print("\nERROR: incomplete field '{}' at line no. {}".format(line, i + 1))
+        sys.exit()
     parameter = list[1].rstrip('\n').strip()
     return(parameter)
 
