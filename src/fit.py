@@ -88,7 +88,7 @@ def fit_spectra(params, specs, params_id, ns, spectral_data, linelists, offdiags
 
     with open(results_filename, "w") as f:
 
-        f.write("msfp.py 1.0\n"\
+        f.write("RM-Fit\n"\
                 "Run time: {}\n\n".format(datetime.datetime.now().isoformat(sep = " ", timespec="minutes")))
 
         results = least_squares(leastsq_fun, params, jac = calc_jac, bounds = bounds, args = (specs, params_id, ns, spectral_data, linelists, offdiags), method = "trf", verbose = 2, max_nfev = 12)
@@ -260,7 +260,7 @@ def calc_jac(params, *args):
     # Estimate dy/dx
     params = [i for i in params]
     x = nu[0:n_nu] - ((nu[-1] + nu[0])/2)
-    for i in range(0, ns, 1):   # Parameters inside msfp file
+    for i in range(0, ns, 1):   # Parameters inside input file
         dx = np.abs(0.001 * params[i])
         params[i] += dx
         print("{} {}".format(params_id[i], params[i]))

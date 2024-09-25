@@ -39,7 +39,7 @@ def msfp(control_file, option):
     fold_path = ''
     folders = spectral_data["calculation"]["output_path"].split(os.sep)
     for i in range(0, len(folders) - 1, 1):
-        fold_path = "{}{}/".format(fold_path, folders[i])
+        fold_path = "{}{}{}".format(fold_path, folders[i], os.sep)
         if not os.path.exists(fold_path):
             print("WARNING - Creating the non-existent output directoy provided (\"{}\")." \
             .format(fold_path))
@@ -102,8 +102,6 @@ def msfp(control_file, option):
             for i in range(0, len(specs[0]), 1):
                 f.write("{:18.10f}{:17.7E}{:17.7E}{:17.7E}\n".format(specs[0][i], specs[1][i], y_calc[i], specs[1][i] - y_calc[i]))
 
-    else:
-        print("ERROR: unrecognized option \"{}\"\nTry \"python rm-fit -h\" or \"python rm-fit --help\" for more information".format(option))
 
     return
 
