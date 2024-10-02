@@ -4,7 +4,7 @@ domain = time           % time/opd/frequency/wavenumber
 $PARAMETERS
 ft_exponent_sign = negative
 polynomial_order = 1                % order of the interpolation polynomial
-iris_diameter = 1.15                % in cm
+iris_diameter = 1.15                % in mm
 focal_length = 418                  % in mm
 ils_size = 10                       % in cm-1
 igm_interpolation = 2

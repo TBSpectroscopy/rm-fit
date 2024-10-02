@@ -491,9 +491,9 @@ def get_ILS(ils_file, nu0, nu):
         return calc_ILS_time(ils_file, nu0, nu, par)
     elif (domain.lower() == "frequency" or domain.lower() == "wavenumber") and datablock:
         return calc_ILS_frequency(ils_file, nu0, nu, par)
-    else:
-        print("ERROR: unrecognized ILS domain\n\nAccepted domains are: \"time\", \"opd\", \"frequency\", or \"wavenumber\"")
-        sys.exit()
+    print("ERROR: unrecognized ILS domain\n\nAccepted domains are: \"time\", \"opd\", \"frequency\", or \"wavenumber\"")
+    sys.exit()
+    return
 
 # ILS from modulation
 def calc_ILS_time(ils_file, nu0, nu, par):

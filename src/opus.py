@@ -36,51 +36,66 @@ def readSpectrum(spec_file, nu_range):
 
 
 def readOpus(opus_file, nu_range):
-    f = open(opus_file, mode = "rb")
-    opus = f.read()
-    npt_pos = opus.find(b"NPT\x00\x00\x00")
-    end_pos = []
+    offset = 24
+    with open(opus_file, mode = "rb") as f:
+        f.seek(offset, 1)
+        header = f.read(504 - offset)
 
-    # Append all END positions
-    end_char = b"END\x00\x00\x00"
-    offset = 0
-    while offset < len(opus):
-        offset = opus.find(end_char, offset)
-        if offset == -1:
-            break
-        end_pos.append(offset)
-        offset += len(end_char)
-    del offset
+        dat_pos = 0
+        dat_size = 0
 
-    fxv_pos = npt_pos + 12
-    lxv_pos = fxv_pos + 16
-    n = struct.unpack("=1I", opus[npt_pos + 8:npt_pos + 12])[0]
+        par_pos = 0
+        par_size = 0
 
-    dat_pos = 0
-    for i in range(0, len(end_pos)-1, 1):
-        if end_pos[i+1] - end_pos[i] > 4*n:
-            dat_pos = end_pos[i] + 8
+        for i in range(0, len(header), 12):
+            data_type = struct.unpack("<B", header[i:i+1])[0]
+            if data_type in [7, 11, 15]:
+                dat_pos = struct.unpack("<I", header[i + 8 : i + 12])[0]
+                dat_size = struct.unpack("<I", header[i + 4 : i + 8])[0]
+            elif data_type in [23, 31]:
+                par_pos = struct.unpack("<I", header[i + 8 : i + 12])[0]
+                par_size = struct.unpack("<I", header[i + 4 : i + 8])[0]
 
-    fxv = struct.unpack("=1d", opus[fxv_pos + 8:fxv_pos + 16])[0]
-    lxv = struct.unpack("=1d", opus[lxv_pos + 8:lxv_pos + 16])[0]
-    if nu_range[0] < fxv or nu_range[1] > lxv:
-        return []
+        del header
+        f.seek(par_pos, 0)
+        par = f.read(par_size * 4)
+        npt_pos = 0
+        fxv_pos = 0
+        lxv_pos = 0
+        for i in range(0, len(par), 4):
+            if par[i: i+4] == b"NPT\x00":
+                npt_pos = i
+            elif par[i: i+4] == b"FXV\x00":
+                fxv_pos = i
+            elif par[i: i+4] == b"LXV\x00":
+                lxv_pos = i
 
-    inter = (lxv - fxv) / (n - 1)
-    new_nu_range = [0, 0]
-    a = math.ceil((nu_range[0] - fxv)/inter)
-    new_nu_range[0] = fxv + (inter * a)
-    new_nu_range[1] = new_nu_range[0] + (inter * math.floor((nu_range[1] - new_nu_range[0]) / inter))
-    n = round(((new_nu_range[1] - new_nu_range[0]) / (inter)) + 1)
+        n = struct.unpack("=1I", par[npt_pos + 8:npt_pos + 12])[0]
+
+        fxv = struct.unpack("=1d", par[fxv_pos + 8:fxv_pos + 16])[0]
+        lxv = struct.unpack("=1d", par[lxv_pos + 8:lxv_pos + 16])[0]
+        if nu_range[0] > lxv or nu_range[1] < fxv:
+            return []
+
+        inter = (lxv - fxv) / (n - 1)
+        new_nu_range = [0, 0]
+        nu_pos = [math.ceil((nu_range[0] - fxv)/inter) * (nu_range[0] >= fxv)]
+        nu_pos.append((math.floor((nu_range[1] - fxv) / inter) * (nu_range[1] <= lxv)) + (n * (nu_range[1] > lxv)))
+        new_nu_range[0] = fxv + (inter * nu_pos[0])
+        new_nu_range[1] = fxv + (inter * nu_pos[1])
+        n = nu_pos[1] - nu_pos[0]
+
+        del par
+        f.seek(dat_pos + (nu_pos[0] * 4))
+        dat = f.read(n * 4)
     
-    y = np.array(struct.unpack("={:d}f".format(n), opus[dat_pos + (a*4):dat_pos + (a*4) + (n*4)]))
+    y = np.array(struct.unpack("={:d}f".format(n), dat))
     x = np.linspace(new_nu_range[0], new_nu_range[1], n)
 
     arr = [x, y]
 
-    f.close()
-
     return arr
+
 
 
 def readAscii(ascii_file, nu_range):
