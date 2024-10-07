@@ -112,8 +112,8 @@ def fit_spectra(params, specs, params_id, ns, spectral_data, linelists, offdiags
         linelist_outputs = [i["linelist_out"] for i in spectral_data["linelists"]]
         offdiag_inputs = [i["off_diagonal_in"] for i in spectral_data["linelists"]]
         offdiag_outputs = [i["off_diagonal_out"] for i in spectral_data["linelists"]]
-        output.write_linelists(linelist_inputs, linelist_outputs, linelists, spectral_data["calculation"]["range"])
-        output.write_offdiags(offdiag_inputs, offdiag_outputs, offdiags)
+        output.write_linelists(linelist_inputs, linelist_outputs, linelists, spectral_data["calculation"]["range"], [i["format"] for i in spectral_data["linelists"]])
+        output.write_offdiags(offdiag_inputs, offdiag_outputs, offdiags, [i["format_offdiag"] for i in spectral_data["linelists"]])
 
         with open("{}_matrices.txt".format(os.path.splitext(results_filename)[0]), "w") as f2:
             f2.write("Hessian & Covariance matrices\n\n")
@@ -176,7 +176,7 @@ def update_parameters(params, *args, unc = []):
     for i in range(ns, len(params_id), 1):
         if params_id[i][3] == "intensity":
             linelists[params_id[i][0]][params_id[i][1]][params_id[i][3]][params_id[i][2]] = (params[i] / 1E20, True, unc[i] / 1E20)
-        elif params_id[i][3] != "value":
+        elif params_id[i][3] != "line-mixing":
             linelists[params_id[i][0]][params_id[i][1]][params_id[i][3]][params_id[i][2]] = (params[i], True, unc[i])
         else:
             offdiags[params_id[i][0]][params_id[i][1]][params_id[i][3]][params_id[i][2]] = (params[i], True, unc[i])

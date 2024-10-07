@@ -5,10 +5,11 @@ $HEADER
  Temperature dependence...: Not supported
  Sample...................: mixture
  Mass Perturbing..........: 44.010 g/mol 
+ Format...................: "{fit:1} {name:11} {wavenumber:12f} {wavenumber_unc:7E}{wavenumber_fit:1}{intensity:11E} {intensity_unc:7E}{intensity_fit:1}{foreign-broadening:10E} {foreign-broadening_unc:7E}{foreign-broadening_fit:1}{self-broadening:10E} {self-broadening_unc:7E}{self-broadening_fit:1}{SD-broadening:10E} {SD-broadening_unc:7E}{SD-broadening_fit:1}{narrowing:10E} {narrowing_unc:7E}{narrowing_fit:1}{foreign-shift:10E} {foreign-shift_unc:7E}{foreign-shift_fit:1}{self-shift:10E} {self-shift_unc:7E}{self-shift_fit:1}{SD-shift:10E} {SD-shift_unc:7E}{SD-shift_fit:1}{statistical weight:9f}{energy:13f}"
 
 
 $LINE_PARAMETERS
-F   name        wavenumber    unc.   intensity    unc.  'air'-br.    unc.   self-br.    unc.  br_sp-dep    unc.  narrowing    unc.  air-shift    unc.  self-shft    unc.  sh_sp-dep    unc.  low_stat   low_energy  assignment
+F   name        wavenumber    unc.   intensity    unc.   frgn-br.    unc.   self-br.    unc.  br_sp-dep    unc.  narrowing    unc. frgn-shift    unc.  self-shft    unc.  sh_sp-dep    unc.  low_stat   low_energy  assignment
 *              3057.849103 0.0E+00  1.4210E-21 0.0E+00  8.435E-02 0.0E+00* 7.700E-02 0.0E+00  0.000E+00 0.0E+00  0.000E+00 0.0E+00 -3.847E-03 0.0E+00* 0.000E+00 0.0E+00  0.000E+00 0.0E+00      54.0    104.78490   5F1 20 -  4F2  1 : 0 0 1 0 1F2 - 0 0 0 0 1A1
 *              3057.910413 0.0E+00  9.4110E-22 0.0E+00  9.759E-02 0.0E+00* 7.800E-02 0.0E+00  0.000E+00 0.0E+00  0.000E+00 0.0E+00 -1.359E-03 0.0E+00* 0.000E+00 0.0E+00  0.000E+00 0.0E+00      36.0    104.78090   5E  13 -  4E   1 : 0 0 1 0 1F2 - 0 0 0 0 1A1
 *              3057.934509 0.0E+00  1.4130E-21 0.0E+00  8.843E-02 0.0E+00* 7.800E-02 0.0E+00  0.000E+00 0.0E+00  0.000E+00 0.0E+00 -1.516E-02 0.0E+00* 0.000E+00 0.0E+00  0.000E+00 0.0E+00      54.0    104.77960   5F2 18 -  4F1  1 : 0 0 1 0 1F2 - 0 0 0 0 1A1

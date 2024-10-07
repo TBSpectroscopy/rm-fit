@@ -381,12 +381,12 @@ def generate_W_nosd(molfrac, press, n_nu0, m, linelist, offdiag, popu):
         for j in range(i+1, n_nu0):
             # check if upper triangle element (ij) exists in offdiag
             if "{} {}".format(linelist["name"][i], linelist["name"][j]) in offdiag["names"]:
-                W[i,j] = offdiag["value"][offdiag["names"].index("{} {}".format(linelist["name"][i], linelist["name"][j]))][0] * press * (-1)                    # upper triangle
-                W[j,i] = offdiag["value"][offdiag["names"].index("{} {}".format(linelist["name"][i], linelist["name"][j]))][0] * press * (-1) * popu[j]/popu[i]  # lower triangle: Wji = Wij rhoj/rhoi
+                W[i,j] = offdiag["line-mixing"][offdiag["names"].index("{} {}".format(linelist["name"][i], linelist["name"][j]))][0] * press * (-1)                    # upper triangle
+                W[j,i] = offdiag["line-mixing"][offdiag["names"].index("{} {}".format(linelist["name"][i], linelist["name"][j]))][0] * press * (-1) * popu[j]/popu[i]  # lower triangle: Wji = Wij rhoj/rhoi
             # check if lower triangle element (ji) exists in offdiag
             elif "{} {}".format(linelist["name"][j], linelist["name"][i]) in offdiag["names"] :
-                W[i,j] = offdiag["value"][offdiag["names"].index("{} {}".format(linelist["name"][j], linelist["name"][i]))][0] * press * (-1) * popu[i]/popu[j]  # upper triangle
-                W[j,i] = offdiag["value"][offdiag["names"].index("{} {}".format(linelist["name"][j], linelist["name"][i]))][0] * press * (-1)                    # lower triangle
+                W[i,j] = offdiag["line-mixing"][offdiag["names"].index("{} {}".format(linelist["name"][j], linelist["name"][i]))][0] * press * (-1) * popu[i]/popu[j]  # upper triangle
+                W[j,i] = offdiag["line-mixing"][offdiag["names"].index("{} {}".format(linelist["name"][j], linelist["name"][i]))][0] * press * (-1)                    # lower triangle
 
     return W
 
@@ -409,12 +409,12 @@ def generate_W(molfrac, press, n_nu0, m, mp, linelist, offdiag, popu, u, sdkind 
         for j in range(i+1, n_nu0) :
             # check if upper triangle element (ij) exists in offdiag
             if "{} {}".format(linelist["name"][i], linelist["name"][j]) in offdiag["names"]:
-                W[i,j] = offdiag["value"][offdiag["names"].index("{} {}".format(linelist["name"][i], linelist["name"][j]))][0] * press * (-1)                    # upper triangle
-                W[j,i] = offdiag["value"][offdiag["names"].index("{} {}".format(linelist["name"][i], linelist["name"][j]))][0] * press * (-1) * popu[j]/popu[i]  # lower triangle: Wji = Wij rhoj/rhoi
+                W[i,j] = offdiag["line-mixing"][offdiag["names"].index("{} {}".format(linelist["name"][i], linelist["name"][j]))][0] * press * (-1)                    # upper triangle
+                W[j,i] = offdiag["line-mixing"][offdiag["names"].index("{} {}".format(linelist["name"][i], linelist["name"][j]))][0] * press * (-1) * popu[j]/popu[i]  # lower triangle: Wji = Wij rhoj/rhoi
             # check if lower triangle element (ji) exists in offdiag
             elif "{} {}".format(linelist["name"][j], linelist["name"][i]) in offdiag["names"] :
-                W[i,j] = offdiag["value"][offdiag["names"].index("{} {}".format(linelist["name"][j], linelist["name"][i]))][0] * press * (-1) * popu[i]/popu[j]  # upper triangle
-                W[j,i] = offdiag["value"][offdiag["names"].index("{} {}".format(linelist["name"][j], linelist["name"][i]))][0] * press * (-1)                    # lower triangle
+                W[i,j] = offdiag["line-mixing"][offdiag["names"].index("{} {}".format(linelist["name"][j], linelist["name"][i]))][0] * press * (-1) * popu[i]/popu[j]  # upper triangle
+                W[j,i] = offdiag["line-mixing"][offdiag["names"].index("{} {}".format(linelist["name"][j], linelist["name"][i]))][0] * press * (-1)                    # lower triangle
 
     return W.transpose(2, 0, 1)
 
@@ -440,12 +440,12 @@ def generate_W_diag(molfrac, press, n_nu0, m, mp, linelist, offdiag, popu, u, sd
         for j in range(i+1, n_nu0) :
             # check if upper triangle element (ij) exists in offdiag
             if "{} {}".format(linelist["name"][i], linelist["name"][j]) in offdiag["names"]:
-                C[i,j] = offdiag["value"][offdiag["names"].index("{} {}".format(linelist["name"][i], linelist["name"][j]))][0] * press * (-1)                    # upper triangle
-                C[j,i] = offdiag["value"][offdiag["names"].index("{} {}".format(linelist["name"][i], linelist["name"][j]))][0] * press * (-1) * popu[j]/popu[i]  # lower triangle: Cji = Cij rhoj/rhoi
+                C[i,j] = offdiag["line-mixing"][offdiag["names"].index("{} {}".format(linelist["name"][i], linelist["name"][j]))][0] * press * (-1)                    # upper triangle
+                C[j,i] = offdiag["line-mixing"][offdiag["names"].index("{} {}".format(linelist["name"][i], linelist["name"][j]))][0] * press * (-1) * popu[j]/popu[i]  # lower triangle: Cji = Cij rhoj/rhoi
             # check if lower triangle element (ji) exists in offdiag
             elif "{} {}".format(linelist["name"][j], linelist["name"][i]) in offdiag["names"] :
-                C[i,j] = offdiag["value"][offdiag["names"].index("{} {}".format(linelist["name"][j], linelist["name"][i]))][0] * press * (-1) * popu[i]/popu[j]  # upper triangle
-                C[j,i] = offdiag["value"][offdiag["names"].index("{} {}".format(linelist["name"][j], linelist["name"][i]))][0] * press * (-1)                    # lower triangle
+                C[i,j] = offdiag["line-mixing"][offdiag["names"].index("{} {}".format(linelist["name"][j], linelist["name"][i]))][0] * press * (-1) * popu[i]/popu[j]  # upper triangle
+                C[j,i] = offdiag["line-mixing"][offdiag["names"].index("{} {}".format(linelist["name"][j], linelist["name"][i]))][0] * press * (-1)                    # lower triangle
 
     return W.transpose(2, 0, 1), C
 

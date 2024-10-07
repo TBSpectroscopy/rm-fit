@@ -12,10 +12,31 @@
 import numpy as np
 import os
 
-def write_linelists(linelist_inputs, linelist_outputs, linelists, spec_range):
+
+# Change line to fit parameter
+def set_line_par(line : str, parpos, par):
+    tup_pos = [0, 2, 1]
+    for i in range(2, len(parpos) - 3, 3):
+        dot_pos = parpos[i][1].find(".")
+        if dot_pos == -1:   # Get number of decimals from input line
+            dot_pos = line.find(".", parpos[i - 2], parpos[i - 1])
+            e_pos = parpos[i][-1]
+            if parpos[i][-1] in ["e", "E"]:
+                e_pos = line.find(parpos[i][-1], dot_pos, parpos[i - 1])
+            dec = e_pos - dot_pos - 1
+            if dot_pos == -1:
+                dec = 0
+            line = line[:parpos[i - 2]] + "{{:{:d}.{:d}{:1}}}".format(int(parpos[i][:-1]), dec, parpos[i][-1]).format(par[tup_pos[int(i/3)]]) + line[parpos[i - 1]:]
+        else:
+            line = line[:parpos[i - 2]] + "{{:{}}}".format(parpos[i]).format(par[tup_pos[int(i/3)]]) + line[parpos[i - 1]:]
+    return line
+
+
+def write_linelists(linelist_inputs, linelist_outputs, linelists, spec_range, linelist_formats):
 
     for i in range(0, len(linelist_inputs), 1):
 
+        # Linelist is separated in blocks and needs to be flattened back
         linelist = dict()
         if len(linelists[i]) != 0:
             for key, item in linelists[i][0].items():
@@ -25,41 +46,37 @@ def write_linelists(linelist_inputs, linelist_outputs, linelists, spec_range):
                 for key, item in linelists[i][j].items():
                     linelist[key] += item
 
-            order = np.argsort(np.array(linelist["wavenumber"])[:,0], kind = "stable")
+            order = np.argsort(np.array(linelist["line_position"]), kind = "stable")
 
             for key, item in linelist.items():
                 linelist[key] = np.array(item)[order]
-                if linelist[key].ndim == 2:
+                if linelist[key].ndim == 2:     # Numpy changes tuple into array and convert booleans to numbers
                     linelist[key] = linelist[key].tolist()
                     for j in linelist[key]:
-                        j[1] = int(j[1])
+                        j[1] = int(j[1])    # Make sure that converted booleans are integers
 
     
         with open(linelist_inputs[i], "r") as f, open("{}.temp".format(linelist_outputs[i]), "w") as nf:
-            start = False
             count = 0
-            for line in f:
-                if line.startswith("$LINE_PARAMETERS"):
-                    start = True
-                    nf.write(line)
-                elif start and not line.startswith("%") and not line.startswith("F"):
-                    if float(line[13:26]) < spec_range[0] or float(line[13:26]) > spec_range[1]:
-                        nf.write(line)
-                    else:
-                        nf.write("{:1} {:11} {:12.6f}{:8.1E}{:1}{:11.4E}{:8.1E}{:1}{:10.3E}{:8.1E}{:1}{:10.3E}{:8.1E}{:1}{:10.3E}{:8.1E}{:1}{:10.3E}{:8.1E}{:1}{:10.3E}{:8.1E}{:1}{:10.3E}{:8.1E}{:1}{:10.3E}{:8.1E}{:1}{:9.1f}{:13.5f}{}".format(line[0], linelist["name"][count], linelist["wavenumber"][count][0], linelist["wavenumber"][count][2], "*" * linelist["wavenumber"][count][1], linelist["intensity"][count][0], linelist["intensity"][count][2], "*" * linelist["intensity"][count][1], linelist["foreign-broadening"][count][0], linelist["foreign-broadening"][count][2], "*" * linelist["foreign-broadening"][count][1], linelist["self-broadening"][count][0], linelist["self-broadening"][count][2], "*" * linelist["self-broadening"][count][1], linelist["SD-broadening"][count][0], linelist["SD-broadening"][count][2], "*" * linelist["SD-broadening"][count][1], linelist["narrowing"][count][0], linelist["narrowing"][count][2], "*" * linelist["narrowing"][count][1], linelist["foreign-shift"][count][0], linelist["foreign-shift"][count][2], "*" * linelist["foreign-shift"][count][1], linelist["self-shift"][count][0], linelist["self-shift"][count][2], "*" * linelist["self-shift"][count][1], linelist["SD-shift"][count][0], linelist["SD-shift"][count][2], "*" * linelist["SD-shift"][count][1], linelist["statistical weight"][count], linelist["energy"][count], line[210:]))
-                        count += 1
-                else:
-                    nf.write(line)
-        os.replace("{}.temp".format(linelist_outputs[i]), linelist_outputs[i])
+            for x, line in enumerate(f):
+                if linelist["line_position"][0] <= x <= linelist["line_position"][-1]:
+                    for key in linelist_formats[i].keys():
+                        if len(linelist_formats[i][key]) == 9 and linelist[key][count][1]:
+                            line = set_line_par(line, linelist_formats[i][key], linelist[key][count])
+                    count += 1
 
+                nf.write(line)
+
+        os.replace("{}.temp".format(linelist_outputs[i]), linelist_outputs[i])
 
     return
 
 
-def write_offdiags(offdiag_inputs, offdiag_outputs, offdiags):
+def write_offdiags(offdiag_inputs, offdiag_outputs, offdiags, offdiag_format):
 
     for i in range(len(offdiags)-1, -1, -1):
 
+        # Offdiag is separated in blocks and needs to be flattened back
         offdiag = dict()
         if len(offdiags[i]) != 0:
             for key, item in offdiags[i][0].items():
@@ -73,11 +90,11 @@ def write_offdiags(offdiag_inputs, offdiag_outputs, offdiags):
         with open(offdiag_inputs[i]) as f, open("{}.temp".format(offdiag_outputs[i]), "w") as nf:
             count = 0
             for line in f:
-                if not line[0:23] in offdiag["names"]:
-                    nf.write(line)
-                else:
-                    nf.write("{:23} {:10.3E}{:8.1E}{:1}\n".format(offdiag["names"][count], offdiag["value"][count][0], offdiag["value"][count][2], "*" * offdiag["value"][count][1]))
+                if "{} {}".format(line[offdiag_format[i]["name_1"][0] : offdiag_format[i]["name_1"][1]], line[offdiag_format[i]["name_2"][0] : offdiag_format[i]["name_2"][1]]) in offdiag["names"]:
+                    if offdiag["line-mixing"][count][1]:
+                        line = set_line_par(line, offdiag_format[i]["line-mixing"], offdiag["line-mixing"][count])
                     count += 1
+                nf.write(line)
 
         os.replace("{}.temp".format(offdiag_outputs[i]), offdiag_outputs[i])
 

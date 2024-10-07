@@ -1,1 +1,6 @@
+$HEADER
+ Temperature..............: 296.00 K
+ Format...................: "{name} {name} {line-mixing:10E} {line-mixing_unc:7E}{line-mixing_fit:1}"
+
+$OFF-DIAGONAL_PARAMETERS
 R03F2015001 R03F1016001  5.564E-03 1.8E-05*
