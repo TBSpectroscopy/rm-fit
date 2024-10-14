@@ -71,6 +71,10 @@ An example is provided in `data/input/` named `ch4_co2.txt`. The input file cont
 
 Initial parameters are followed by an 'f' if you want to fit them, or 'c' if you want them to stay constant. The parameters inside the blocks are detailed in the example file.
 
+### Linelist
+
+Lines needed to compute the example input file are provided by the linelists `diag_61.txt` and `diag_62.txt` and the off-diagonal list `offdiag_61.txt`. All files must contain a header giving details about the species, and a format section inside quotation marks allowing RM-Fit to know how to read the parameters. The format follows a structure similar to python's string `format` method, with braces containing the name of a parameter and its width separated by a colon. The width can include a letter indicating how the numbers should be formatted. Spaces are considered inside the format section and can be used to ignore sections of the lists (ignored parameters are assumed to be 0).
+
 
 Citation
 --------

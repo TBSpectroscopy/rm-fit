@@ -9,6 +9,9 @@
 #-------------------------------------------------------------------------------------------------
 
 
+import sys
+
+
 def get(control_file):
 
     spec = []
@@ -86,9 +89,15 @@ def get(control_file):
                 elif control[j].startswith("linelist_out ="):
                     linelist[count_linelists]["linelist_out"] = get_parameter(j, control[j])
                 elif control[j].startswith("off_diagonal_in ="):
-                    linelist[count_linelists]["off_diagonal_in"] = get_parameter(j, control[j])
+                    if len((control[j].split("%")[0]).split("=")) == 1:
+                        linelist[count_linelists]["off_diagonal_in"] = ""
+                    else:
+                        linelist[count_linelists]["off_diagonal_in"] = get_parameter(j, control[j])
                 elif control[j].startswith("off_diagonal_out ="):
-                    linelist[count_linelists]["off_diagonal_out"] = get_parameter(j, control[j])
+                    if len((control[j].split("%")[0]).split("=")) == 1:
+                        linelist[count_linelists]["off_diagonal_out"] = ""
+                    else:
+                        linelist[count_linelists]["off_diagonal_out"] = get_parameter(j, control[j])
                 elif control[j].startswith("tips ="):
                     linelist[count_linelists]["tips"] = get_parameter(j, control[j])
             elif blocpos[i]["type"] == "calculation":
@@ -129,6 +138,11 @@ def get(control_file):
 
 
     spectral_data = {"spectra": spec, "linelists": linelist, "calculation": calculation, "fit": fit}
+
+    for i in linelist:
+        if i["off_diagonal_in"] != "" and i["off_diagonal_out"] == "":
+             print("ERROR: \"off_diagonal_out\" not set for \"{}\"".format(i["off_diagonal_in"]))
+             sys.exit()
 
     return spectral_data, fitted_par
 

@@ -75,28 +75,29 @@ def write_linelists(linelist_inputs, linelist_outputs, linelists, spec_range, li
 def write_offdiags(offdiag_inputs, offdiag_outputs, offdiags, offdiag_format):
 
     for i in range(len(offdiags)-1, -1, -1):
+        if len(offdiag_format[i]) != 0:
 
-        # Offdiag is separated in blocks and needs to be flattened back
-        offdiag = dict()
-        if len(offdiags[i]) != 0:
-            for key, item in offdiags[i][0].items():
-                offdiag[key] = []
+            # Offdiag is separated in blocks and needs to be flattened back
+            offdiag = dict()
+            if len(offdiags[i]) != 0:
+                for key, item in offdiags[i][0].items():
+                    offdiag[key] = []
 
-            for j in range(0, len(offdiags[i]), 1):
-                for key, item in offdiags[i][j].items():
-                    offdiag[key] += item
+                for j in range(0, len(offdiags[i]), 1):
+                    for key, item in offdiags[i][j].items():
+                        offdiag[key] += item
 
 
-        with open(offdiag_inputs[i]) as f, open("{}.temp".format(offdiag_outputs[i]), "w") as nf:
-            count = 0
-            for line in f:
-                if "{} {}".format(line[offdiag_format[i]["name_1"][0] : offdiag_format[i]["name_1"][1]], line[offdiag_format[i]["name_2"][0] : offdiag_format[i]["name_2"][1]]) in offdiag["names"]:
-                    if offdiag["line-mixing"][count][1]:
-                        line = set_line_par(line, offdiag_format[i]["line-mixing"], offdiag["line-mixing"][count])
-                    count += 1
-                nf.write(line)
+            with open(offdiag_inputs[i]) as f, open("{}.temp".format(offdiag_outputs[i]), "w") as nf:
+                count = 0
+                for line in f:
+                    if "{} {}".format(line[offdiag_format[i]["name_1"][0] : offdiag_format[i]["name_1"][1]], line[offdiag_format[i]["name_2"][0] : offdiag_format[i]["name_2"][1]]) in offdiag["names"]:
+                        if offdiag["line-mixing"][count][1]:
+                            line = set_line_par(line, offdiag_format[i]["line-mixing"], offdiag["line-mixing"][count])
+                        count += 1
+                    nf.write(line)
 
-        os.replace("{}.temp".format(offdiag_outputs[i]), offdiag_outputs[i])
+            os.replace("{}.temp".format(offdiag_outputs[i]), offdiag_outputs[i])
 
     return
 

@@ -25,7 +25,7 @@ def msfp(control_file, option):
 
     # Program start-up
     if not os.path.exists(control_file) :
-        print("ERROR - File \"{}\" does not exist.".format(control_file))
+        print("ERROR: file \"{}\" does not exist".format(control_file))
         return
 
     # Get parameters from control file
@@ -41,7 +41,7 @@ def msfp(control_file, option):
     for i in range(0, len(folders) - 1, 1):
         fold_path = "{}{}{}".format(fold_path, folders[i], os.sep)
         if not os.path.exists(fold_path):
-            print("WARNING - Creating the non-existent output directoy provided (\"{}\")." \
+            print("WARNING: creating the non-existent output directoy provided (\"{}\")" \
             .format(fold_path))
             os.mkdir(fold_path)
     

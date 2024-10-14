@@ -11,14 +11,39 @@
 
 import numpy as np
 import sys
+import os
 
 
-def get_lines(linelist_file, spec_range):
+def set_default_par(par, profile):
+    prof_comb = {"voigt": ["lorentz"], "rautian": ["lorentz", "narrowing"], "qsd_voigt": ["lorentz", "speed-dependence"], "qsd_rautian": ["lorentz", "speed-dependence", "narrowing"]}
+    par_prof = {"essentials": ["wavenumber", "intensity"], "general": ["name", "statistical weight", "energy"], "lorentz": ["self-broadening", "foreign-broadening", "self-shift", "foreign-shift"], "narrowing": ["narrowing"], "speed-dependence": ["SD-broadening", "SD-shift"]}
+
+    for i in par_prof["essentials"]:
+        if not i in par:
+            print("ERROR: column \"{}\" not provided".format(i))
+            sys.exit()
+
+    if "name" in par and (not "statistical weight" in par or not "energy" in par):
+        print("ERROR: \"statistical weight\" and \"energy\" columns must be provided if \"name\" column exists\nEither remove \"name\" or provide the missing column(s)")
+        sys.exit()
+    elif not "name" in par:
+        par["name"] = ["" for k in par["wavenumber"]]
+
+    for i in prof_comb[profile]:
+        for j in par_prof[i]:
+            if not j in par:
+                par[j] = [(0.0, False, 0.0) for k in par["wavenumber"]]
+
+    return
+
+
+def get_lines(linelist_file, spec_range, profile):
 
     mass = 0.0
     mass_perturbing = 0.0
     parpos = dict()
     par = dict()
+
 
     startx = 0
     with open(linelist_file) as f:
@@ -55,6 +80,8 @@ def get_lines(linelist_file, spec_range):
     if mass <= 0.0:
         print("ERROR: absorber mass not provided in {}".format(linelist_file))
         sys.exit()
+
+    set_default_par(par, profile)
 
     return par, mass, mass_perturbing, parpos
 
@@ -106,7 +133,11 @@ def get_format(form, name_width = None):   # Convert "Format" field string to ab
 
 
 def read_linelist(par, line, parpos, x):
-    fit = (line[parpos["fit"][0] : parpos["fit"][1]] == "*")
+
+    fit = True
+    if "fit" in parpos:
+        fit = (line[parpos["fit"][0] : parpos["fit"][1]] == "*")
+
     for key in par.keys():
         if key != "line_position":
             if len(parpos[key]) > 3:
@@ -125,25 +156,30 @@ def get_offdiag(offdiag_list, names):
     names_used = []
     parpos = dict()
 
-    for name in names:
-        if len(name.strip()) != 0:
-            names_used.append(name)
-    with open(offdiag_list) as f:
-        start = False
-        for line in f:
-            if start:
-                for name in names_used:
-                    if name == line[parpos["name_1"][0] : parpos["name_1"][1]]:
-                        offdiag["names"].append("{} {}".format(line[parpos["name_1"][0] : parpos["name_1"][1]], line[parpos["name_2"][0] : parpos["name_2"][1]]))
-                        offdiag["line-mixing"].append((float(line[parpos["line-mixing"][0] : parpos["line-mixing"][1]]), line[parpos["line-mixing"][6] : parpos["line-mixing"][7]] == "*", float(line[parpos["line-mixing"][3] : parpos["line-mixing"][4]])))
-            elif "Format...................:" in line:
-                form = line.split("..:")[1]
-                form_st = form.find("\"")
-                form_en = form.find("\"", form_st + 1)
-                form = form[form_st + 1 : form_en]
-                parpos = get_format(form, len(names[0]))
-            elif line.startswith("$OFF-DIAGONAL_PARAMETERS"):
-                start = True
+    if os.path.exists(offdiag_list):
+        for name in names:
+            if len(name.strip()) != 0:
+                names_used.append(name)
+        with open(offdiag_list) as f:
+            start = False
+            for line in f:
+                if start:
+                    for name in names_used:
+                        if len(parpos) != 0:
+                            if name == line[parpos["name_1"][0] : parpos["name_1"][1]]:
+                                offdiag["names"].append("{} {}".format(line[parpos["name_1"][0] : parpos["name_1"][1]], line[parpos["name_2"][0] : parpos["name_2"][1]]))
+                                offdiag["line-mixing"].append((float(line[parpos["line-mixing"][0] : parpos["line-mixing"][1]]), line[parpos["line-mixing"][6] : parpos["line-mixing"][7]] == "*", float(line[parpos["line-mixing"][3] : parpos["line-mixing"][4]])))
+                elif "Format...................:" in line and len(names_used) != 0:
+                    form = line.split("..:")[1]
+                    form_st = form.find("\"")
+                    form_en = form.find("\"", form_st + 1)
+                    form = form[form_st + 1 : form_en]
+                    parpos = get_format(form, len(names[0]))
+                    if not "name_1" in parpos or not "name_2" in parpos:
+                        parpos = dict()
+                        print("WARNING: \"name_1\" and \"name_2\" columns must be provided for the off-diagonal elements to be used")
+                elif line.startswith("$OFF-DIAGONAL_PARAMETERS"):
+                    start = True
 
     return offdiag, parpos
 
@@ -201,7 +237,7 @@ def get_blocks(spectral_data):
     offdiags = []
     blocks = [[] for i in range(0, len(spectral_data["linelists"]), 1)]
     for i in range(0, len(spectral_data["linelists"]), 1):
-        linelist_temp, spectral_data["linelists"][i]["mass"], spectral_data["linelists"][i]["mass_perturbing"], spectral_data["linelists"][i]["format"] = get_lines(spectral_data["linelists"][i]["linelist_in"], spectral_data["calculation"]["range"])
+        linelist_temp, spectral_data["linelists"][i]["mass"], spectral_data["linelists"][i]["mass_perturbing"], spectral_data["linelists"][i]["format"] = get_lines(spectral_data["linelists"][i]["linelist_in"], spectral_data["calculation"]["range"], spectral_data["calculation"]["line_profile"])
         offdiag_temp, spectral_data["linelists"][i]["format_offdiag"] = get_offdiag(spectral_data["linelists"][i]["off_diagonal_in"], linelist_temp["name"])
 
         linelist_blocks, offdiag_blocks = separate_lines(offdiag_temp, linelist_temp, spectral_data["linelists"][i]["format_offdiag"])

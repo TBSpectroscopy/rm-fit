@@ -25,8 +25,8 @@ $LINELIST #2
 include = yes
 linelist_in = ../linelists/diag_62.txt
 linelist_out = ../linelists/diag_62_out.txt
-off_diagonal_in = ../linelists/empty.txt
-off_diagonal_out = ../linelists/empty.txt
+off_diagonal_in = 
+off_diagonal_out = 
 tips = ../tips/62_tips.txt
 
 $CALCULATION
