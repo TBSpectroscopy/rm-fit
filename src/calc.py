@@ -97,7 +97,7 @@ def calc_voigt(pressure, temperature, mass, mole_fraction, xcal, linelist, vnu, 
         
         lim0, lim1 = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu)
 
-        voigt = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, 0.0, shift) * linelist["intensity"][i][0]
+        voigt = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, 0.0, shift, linelist["line-mixing"][i][0] * pressure) * linelist["intensity"][i][0]
 
         sigma[lim0:lim1] += voigt
 
@@ -121,7 +121,7 @@ def calc_rautian(pressure, temperature, mass, mole_fraction, xcal, linelist, vnu
         
         lim0, lim1 = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu)
 
-        rau = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, narrowing, shift) * linelist["intensity"][i][0]
+        rau = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, narrowing, shift, linelist["line-mixing"][i][0] * pressure) * linelist["intensity"][i][0]
 
         sigma[lim0:lim1] += rau
 
@@ -150,7 +150,7 @@ def calc_qsdvoigt(pressure, temperature, mass, mole_fraction, xcal, linelist, vn
 
         for j in range(lim0, lim1, 1):
             line_r, line_i = (qSDV.qsdv(linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, sd_width, shift, sd_shift, vnu[j], LS_qSDV_R, LS_qSDV_I))
-            sigma_temp[j] = line_r - (0*line_i)
+            sigma_temp[j] = line_r - (pressure * linelist["line-mixing"][i][0] * line_i)
         sigma_temp = np.array(sigma_temp) * linelist["intensity"][i][0]
         sigma += sigma_temp
 
@@ -162,6 +162,7 @@ def calc_qsdvoigt(pressure, temperature, mass, mole_fraction, xcal, linelist, vn
 def calc_qsdrautian(pressure, temperature, mass, mole_fraction, xcal, linelist, vnu, lowest_value):
 
     sigma = np.zeros(len(vnu), dtype = np.double)
+
 
     for i in range(0, len(linelist["wavenumber"]), 1):
         sigma_temp = [0.0] * len(vnu)
@@ -180,7 +181,7 @@ def calc_qsdrautian(pressure, temperature, mass, mole_fraction, xcal, linelist, 
 
         for j in range(lim0, lim1, 1):
             line_r, line_i = (qSDHC.qsdhc(linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, sd_width, shift, sd_shift, narrowing, vnu[j], LS_qSDV_R, LS_qSDV_I))
-            sigma_temp[j] = line_r - (0*line_i)
+            sigma_temp[j] = line_r - (pressure * linelist["line-mixing"][i][0] * line_i)
         sigma_temp = np.array(sigma_temp) * linelist["intensity"][i][0]
         sigma += sigma_temp
 

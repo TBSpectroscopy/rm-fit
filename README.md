@@ -3,7 +3,7 @@
 What is RM-Fit?
 ---------------
 
-RM-Fit (Relaxation Matrix-Fit) is a free (libre) multi-spectrum fitting python script using the relaxation matrix formalism (C++ and Fortran). It is capable of modeling full line mixing in combination with speed-dependent and narrowing effects. The current version does not allow for first-order line mixing, but it will be added eventually.
+RM-Fit (Relaxation Matrix-Fit) is a free (libre) multi-spectrum fitting python script using the relaxation matrix formalism (C++ and Fortran). It is capable of modeling full line mixing in combination with speed-dependent and narrowing effects, as well as first-order line-mixing.
 
 Compilation
 -----------
@@ -83,6 +83,6 @@ If you use RM-Fit in your work, please cite it using the following references:
 
 T. Bertin and J. Vander Auwera, “CO2 collision-induced line parameters for the ν3 band of 12CH4 measured using a hard-collision speed-dependent line shape and the relaxation matrix formalism,” Journal of Quantitative Spectroscopy and Radiative Transfer, vol. 324, p. 109069, Sep. 2024, doi: 10.1016/j.jqsrt.2024.109069. [Link to article](https://www.sciencedirect.com/science/article/abs/pii/S0022407324001766)
 
-N. H. Ngo, D. Lisak, H. Tran, and J.-M. Hartmann, “Erratum to ‘An isolated line-shape model to go beyond the Voigt profile in spectroscopic databases and radiative transfer codes’ [J. Quant. Spectrosc. Radiat. Transf. 129 (2013) 89–100],” Journal of Quantitative Spectroscopy and Radiative Transfer, vol. 134, p. 105, Feb. 2014, doi: 10.1016/j.jqsrt.2013.10.016. [Link to article](https://www.sciencedirect.com/science/article/abs/pii/S0022407313002598)
+H. Tran, N. H. Ngo, and J. Hartmann, “Efficient computation of some speed-dependent isolated line profiles,” Journal of Quantitative Spectroscopy and Radiative Transfer, vol. 129, pp. 199–203, Nov. 2013, doi: 10.1016/j.jqsrt.2013.06.015. [Link to article](https://www.sciencedirect.com/science/article/abs/pii/S0022407313002598)
 
 F. Schreier, S. Gimeno García, P. Hochstaffl, and S. Städt, “Py4CAtS—PYthon for Computational ATmospheric Spectroscopy,” Atmosphere, vol. 10, no. 5, Art. no. 5, May 2019, doi: 10.3390/atmos10050262. [Link to article](https://www.mdpi.com/2073-4433/10/5/262)

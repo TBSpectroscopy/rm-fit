@@ -32,7 +32,7 @@ tips = ../tips/62_tips.txt
 $CALCULATION
 spectra_considered = 1              % indices of the $SPECTRUM blocks (does not depend on what is written after $SPECTRUM)
 range = 3052.7 3062.3               % min max in wavenumber
-line_profile = qsd_rautian          % voigt/rautian/galatry/qsd_voigt/qsd_rautian
+line_profile = qsd_rautian          % voigt/rautian/qsd_voigt/qsd_rautian
 method = general                    % general/correlation | Used for the line mixing calculation. "correlation" moves the line mixing inside the correlation matrix and considers a diagonal relaxation matrix
 x_calibration_factor = 7.47E-7c     % (1 + x_calibration_factor) * wavenumber scale
 output_path = ../results/3057_7     % output files path
