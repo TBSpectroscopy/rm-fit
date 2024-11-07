@@ -19,7 +19,6 @@ import fit
 import output
 import numpy as np
 import scipy.optimize as optimize
-import time
 
 def msfp(control_file, option):
 
@@ -92,7 +91,6 @@ def msfp(control_file, option):
         return
 
     elif option == "-c":
-        starttime = time.time()
         y_calc = np.array([])
         for i in range(0, len(spectral_data["spectra"]), 1):
             y_calc = np.concatenate((y_calc, fit.recalc_spectrum(params, i, specs, params_id, len(spectral_fit), spectral_data, linelists, offdiags)), axis = None)

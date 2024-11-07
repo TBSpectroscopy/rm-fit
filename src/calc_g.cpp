@@ -23,12 +23,12 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/eigen.h>
 #include <pybind11/stl.h>
-#include <iostream>
+//#include <iostream>       // Uncomment this and all "std::cout" if progress indicator is desired
 
 using namespace std::complex_literals; // Allow "i" "il" and "if" operators for complex
 
 /** Trapezoid integration **/
-Eigen::MatrixXcd integrate(std::vector<Eigen::MatrixXcd> arr, double inter = 1.0)
+Eigen::MatrixXcd integrate(const std::vector<Eigen::MatrixXcd> &arr, double inter = 1.0)
 {
     int n_nu0 = arr[0].rows();
     Eigen::MatrixXcd integ = Eigen::MatrixXcd::Zero(n_nu0, n_nu0);
