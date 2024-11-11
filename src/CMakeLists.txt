@@ -1,5 +1,7 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.20)
 project(calc_g)
+
+set (CMAKE_CXX_STANDARD 23)
 
 #set(pybind11_DIR /usr/include/pybind11)
 find_package(pybind11 REQUIRED)

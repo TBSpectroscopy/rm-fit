@@ -9,12 +9,20 @@ Compilation
 -----------
 ### Dependencies
 
-- [gcc/g++/gfortran](https://gcc.gnu.org/)
+- [gcc, g++](https://gcc.gnu.org/) / [clang](https://clang.llvm.org/) with C++ >= 14
+- [gfortran](https://gcc.gnu.org/fortran/)
 - [CMake](https://cmake.org/)
+- [Python 3.x](https://www.python.org/)
 - [pybind11](https://github.com/pybind/pybind11)
 - [meson](https://mesonbuild.com/)
 - [NumPy](https://numpy.org/)
 - [Eigen](https://eigen.tuxfamily.org)
+
+#### Linux
+Arch Linux: Every dependencies are available through the package manager and the AUR
+
+#### macOS
+Clang is available through Xcode Command Line Tools (`sudo xcode-select --install`). Everything else is available through [Homebrew](https://brew.sh/)
 
 ### Instructions
 
@@ -30,11 +38,11 @@ Compilation
 
 3. Compile the Fortran and C++ libraries
     ```
-    python -m numpy.f2py -c qSDHC.pyf qSDHC.for CPF3.for CPF.for --f90flags="-Ofast"
-    python -m numpy.f2py -c qSDV.pyf qSDV.for CPF3.for CPF.for --f90flags="-Ofast"
+    python3 -m numpy.f2py -c qSDHC.pyf qSDHC.for CPF3.for CPF.for --f90flags="-Ofast"
+    python3 -m numpy.f2py -c qSDV.pyf qSDV.for CPF3.for CPF.for --f90flags="-Ofast"
     mkdir build
     cd build
-    cmake ../
+    cmake ..
     make
     ```
 
@@ -44,7 +52,7 @@ Usage
 Open a terminal in the main folder `rm-fit/`
 
 ```
-python rm-fit.py [option] [input_file]
+python3 rm-fit.py [option] [input_file]
 ```
 
 | `option` | Description |
@@ -55,7 +63,7 @@ python rm-fit.py [option] [input_file]
 
 ### Dependencies
 
-- python 3
+- Python 3.x
 - NumPy
 - SciPy
 
