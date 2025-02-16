@@ -22,7 +22,7 @@ Compilation
 Arch Linux: Every dependencies are available through the package manager and the AUR
 
 #### macOS
-Clang is available through Xcode Command Line Tools (`sudo xcode-select --install`). Everything else is available through [Homebrew](https://brew.sh/)
+Clang is available through Xcode Command Line Tools (`sudo xcode-select --install`). Everything else is available through [Homebrew](https://brew.sh/) and [pip](https://pip.pypa.io/)
 
 ### Instructions
 

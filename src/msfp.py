@@ -19,6 +19,7 @@ import fit
 import output
 import numpy as np
 import scipy.optimize as optimize
+import sys
 
 def msfp(control_file, option):
 
@@ -54,6 +55,10 @@ def msfp(control_file, option):
     for i in range(0, len(spectral_data["spectra"]), 1):
         spec = opus.readSpectrum(spectral_data["spectra"][i]["spectrum"], spectral_data["calculation"]["range"])
         nu = spec[0]
+        if len(spec[0]) < 2:
+            print("ERROR: spectral region in control file is out of boundaries of experiment.\nRM-Fit is a fitting software and does not currently support calculations without a spectrum file. For these use cases we recommend HAPI or HAPI2.")
+            sys.exit()
+
         specs[0] = np.concatenate((specs[0], spec[0]), axis = None)
         specs[1] = np.concatenate((specs[1], spec[1]), axis = None)
 

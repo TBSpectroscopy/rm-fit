@@ -26,19 +26,22 @@ import tips
 #-------------------------------------------------------------------------------------------------
 # Calculate limits up to which the line is calculated in the wavenumber axis
 
-def calc_lims(lowest_value, doppler_width, lorentz_width, shift, nu0, vnu):
+def calc_lims(lowest_value, doppler_width, lorentz_width, shift, nu0, vnu, dnu):
 
-    dnu = (vnu[-1] - vnu[0]) / (len(vnu) - 1)
-
-    numaxd = dnu    # Ensure that at least 3 points are calculated
-    numaxl = dnu
-    if lowest_value < (math.sqrt(np.log(2) / math.pi) / doppler_width):
+    numaxd = 0
+    numaxl = 0
+    dcheck = False
+    lcheck = False
+    if lowest_value < (math.sqrt(np.log(2) / math.pi) / doppler_width): # If lowest line profile point is lower than maximum of Doppler and Lorentzian
         numaxd = doppler_width * math.sqrt( - np.log(lowest_value / (math.sqrt(np.log(2) / math.pi) / doppler_width)) / math.log(2))
-    if lowest_value < (1 / (math.pi * lorentz_width)):
+        dcheck = True
+    if lorentz_width and lowest_value < (1 / (math.pi * lorentz_width)):
         numaxl = math.sqrt((lorentz_width / (math.pi * lowest_value)) - (lorentz_width ** 2))
+        lcheck = True
+
     numax = max(numaxd, numaxl)
 
-    return max(int((nu0 + shift - numax - vnu[0]) / dnu), 0), min(int(math.ceil((nu0 + shift + numax - vnu[0]) / dnu)) + 1, len(vnu))
+    return max(int((nu0 + shift - numax - vnu[0]) / dnu), 0), min(int(math.ceil((nu0 + shift + numax - vnu[0]) / dnu)) + 1, len(vnu)), dcheck + lcheck > 0
 
 #-------------------------------------------------------------------------------------------------
 # Calculate absorption cross section
@@ -87,6 +90,7 @@ def calc_voigt(pressure, temperature, mass, mole_fraction, xcal, linelist, vnu, 
 
     sigma = np.zeros(len(vnu), dtype = np.double)
 
+    dnu = (vnu[-1] - vnu[0]) / (len(vnu) - 1)
     for i in range(0, len(linelist["wavenumber"]), 1):
 
         lowest_value_ = lowest_value / linelist["intensity"][i][0] # Absorption cross section divided by the intensity to get the lowest value needed for the profile
@@ -95,11 +99,12 @@ def calc_voigt(pressure, temperature, mass, mole_fraction, xcal, linelist, vnu, 
         lorentz_width = ((linelist["self-broadening"][i][0] * mole_fraction) + (linelist["foreign-broadening"][i][0] * (1 - mole_fraction))) * pressure
         shift = ((linelist["self-shift"][i][0] * mole_fraction) + (linelist["foreign-shift"][i][0] * (1 - mole_fraction))) * pressure
         
-        lim0, lim1 = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu)
+        lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu, dnu)
+        if calc_check:
 
-        voigt = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, 0.0, shift, linelist["line-mixing"][i][0] * pressure) * linelist["intensity"][i][0]
+            voigt = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, 0.0, shift, linelist["line-mixing"][i][0] * pressure) * linelist["intensity"][i][0]
 
-        sigma[lim0:lim1] += voigt
+            sigma[lim0:lim1] += voigt
 
     return sigma
 
@@ -110,6 +115,7 @@ def calc_rautian(pressure, temperature, mass, mole_fraction, xcal, linelist, vnu
 
     sigma = np.zeros(len(vnu), dtype = np.double)
 
+    dnu = (vnu[-1] - vnu[0]) / (len(vnu) - 1)
     for i in range(0, len(linelist["wavenumber"]), 1):
 
         lowest_value_ = lowest_value / linelist["intensity"][i][0] # Absorption cross section divided by the intensity to get the lowest value needed for the profile
@@ -119,11 +125,12 @@ def calc_rautian(pressure, temperature, mass, mole_fraction, xcal, linelist, vnu
         narrowing = linelist["narrowing"][i][0] * pressure
         shift = ((linelist["self-shift"][i][0] * mole_fraction) + (linelist["foreign-shift"][i][0] * (1 - mole_fraction))) * pressure
         
-        lim0, lim1 = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu)
+        lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu, dnu)
+        if calc_check:
 
-        rau = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, narrowing, shift, linelist["line-mixing"][i][0] * pressure) * linelist["intensity"][i][0]
+            rau = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, narrowing, shift, linelist["line-mixing"][i][0] * pressure) * linelist["intensity"][i][0]
 
-        sigma[lim0:lim1] += rau
+            sigma[lim0:lim1] += rau
 
     return sigma
 
@@ -134,8 +141,8 @@ def calc_qsdvoigt(pressure, temperature, mass, mole_fraction, xcal, linelist, vn
 
     sigma = np.zeros(len(vnu), dtype = np.double)
 
+    dnu = (vnu[-1] - vnu[0]) / (len(vnu) - 1)
     for i in range(0, len(linelist["wavenumber"]), 1):
-        sigma_temp = [0.0] * len(vnu)
         lowest_value_ = lowest_value / linelist["intensity"][i][0] # Absorption cross section divided by the intensity to get the lowest value needed for the profile
 
         doppler_width = doppler.hwhm(linelist["wavenumber"][i][0], temperature, mass)
@@ -146,13 +153,11 @@ def calc_qsdvoigt(pressure, temperature, mass, mole_fraction, xcal, linelist, vn
         LS_qSDV_R = 0.0
         LS_qSDV_I = 0.0
 
-        lim0, lim1 = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu)
+        lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu, dnu)
 
-        for j in range(lim0, lim1, 1):
-            line_r, line_i = (qSDV.qsdv(linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, sd_width, shift, sd_shift, vnu[j], LS_qSDV_R, LS_qSDV_I))
-            sigma_temp[j] = line_r - (pressure * linelist["line-mixing"][i][0] * line_i)
-        sigma_temp = np.array(sigma_temp) * linelist["intensity"][i][0]
-        sigma += sigma_temp
+        if calc_check:
+            line_ri = [qSDV.qsdv(linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, sd_width, shift, sd_shift, vnu[j], LS_qSDV_R, LS_qSDV_I) for j in range(lim0, lim1, 1)]
+            sigma[lim0:lim1] += np.array([(j[0] - (pressure * linelist["line-mixing"][i][0] * j[1])) * linelist["intensity"][i][0] for j in line_ri])
 
     return sigma
 
@@ -164,8 +169,8 @@ def calc_qsdrautian(pressure, temperature, mass, mole_fraction, xcal, linelist, 
     sigma = np.zeros(len(vnu), dtype = np.double)
 
 
+    dnu = (vnu[-1] - vnu[0]) / (len(vnu) - 1)
     for i in range(0, len(linelist["wavenumber"]), 1):
-        sigma_temp = [0.0] * len(vnu)
         lowest_value_ = lowest_value / linelist["intensity"][i][0] # Absorption cross section divided by the intensity to get the lowest value needed for the profile
 
         doppler_width = doppler.hwhm(linelist["wavenumber"][i][0], temperature, mass)
@@ -177,13 +182,11 @@ def calc_qsdrautian(pressure, temperature, mass, mole_fraction, xcal, linelist, 
         LS_qSDV_R = 0.0
         LS_qSDV_I = 0.0
 
-        lim0, lim1 = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu)
+        lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu, dnu)
 
-        for j in range(lim0, lim1, 1):
-            line_r, line_i = (qSDHC.qsdhc(linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, sd_width, shift, sd_shift, narrowing, vnu[j], LS_qSDV_R, LS_qSDV_I))
-            sigma_temp[j] = line_r - (pressure * linelist["line-mixing"][i][0] * line_i)
-        sigma_temp = np.array(sigma_temp) * linelist["intensity"][i][0]
-        sigma += sigma_temp
+        if calc_check:
+            line_ri = [qSDHC.qsdhc(linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, sd_width, shift, sd_shift, narrowing, vnu[j], LS_qSDV_R, LS_qSDV_I) for j in range(lim0, lim1, 1)]
+            sigma[lim0:lim1] += np.array([(j[0] - (pressure * linelist["line-mixing"][i][0] * j[1])) * linelist["intensity"][i][0] for j in line_ri])
 
     return sigma
 
@@ -240,19 +243,20 @@ def calc_nosd_mat(pressure, temperature, mass, mole_fraction, xcal, linelist, of
         else:
             narrowing = 0.0
         
-        lim0, lim1 = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], nvnu)
-        nu0mid = (nvnu[lim0] + nvnu[lim1-1])/2
+        lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], nvnu, dnu)
+        if calc_check:
+            nu0mid = (nvnu[lim0] + nvnu[lim1-1])/2
 
-        rau = rautian.calc_rautian(nvnu[lim0:lim1], nu0mid, doppler_width, 0.0, narrowing, 0.0)
-        if len(rau) % 2 == 0:
-            rau = np.delete(rau, len(rau)-1)
+            rau = rautian.calc_rautian(nvnu[lim0:lim1], nu0mid, doppler_width, 0.0, narrowing, 0.0)
+            if len(rau) % 2 == 0:
+                rau = np.delete(rau, len(rau)-1)
 
-        sigma_temp = -(((sigma1[i] * sigma2[i])/(nvnu[lim0:lim1] - eival[i])).imag)
-        sigma_temp *= nvnu[lim0:lim1] * (1 - np.exp(-c2_constant * nvnu[lim0:lim1])) 
-        if profile != "lorentz":
-            sigma_temp = np.concatenate(([0.0]*int(len(rau)/2), sigma_temp), axis = None)
-            sigma_temp = np.concatenate((sigma_temp, [0.0]*int(len(rau)/2)), axis = None)
-            sigma[lim0:lim1] += signal.fftconvolve(sigma_temp, rau, mode = "valid") * ((nvnu[-1] - nvnu[0]) / (len(nvnu) - 1))
+            sigma_temp = -(((sigma1[i] * sigma2[i])/(nvnu[lim0:lim1] - eival[i])).imag)
+            sigma_temp *= nvnu[lim0:lim1] * (1 - np.exp(-c2_constant * nvnu[lim0:lim1]))
+            if profile != "lorentz":
+                sigma_temp = np.concatenate(([0.0]*int(len(rau)/2), sigma_temp), axis = None)
+                sigma_temp = np.concatenate((sigma_temp, [0.0]*int(len(rau)/2)), axis = None)
+                sigma[lim0:lim1] += signal.fftconvolve(sigma_temp, rau, mode = "valid") * ((nvnu[-1] - nvnu[0]) / (len(nvnu) - 1))
 
     interplot = interpolate.interp1d(nvnu, sigma, kind = "cubic")
     sigma = interplot(vnu)
@@ -299,6 +303,7 @@ def calc_sd_mat(pressure, temperature, mass, mass_p, mole_fraction, xcal, lineli
 
     sigma = np.zeros(len(vnu), dtype = np.double)
     lims = [[0.0, 0.0] for i in range(0, len(linelist["wavenumber"]), 1)]
+    dnu = ((vnu[-1] - vnu[0]) / (len(vnu) - 1))
     for i in range(0, len(linelist["wavenumber"]), 1):
         lowest_value_ = lowest_value / linelist["intensity"][i][0] # Absorption cross section divided by the intensity to get the lowest value needed for the profile
 
@@ -306,7 +311,7 @@ def calc_sd_mat(pressure, temperature, mass, mass_p, mole_fraction, xcal, lineli
         lorentz_width = ((linelist["self-broadening"][i][0] * mole_fraction) + (linelist["foreign-broadening"][i][0] * (1 - mole_fraction))) * pressure
         shift = ((linelist["self-shift"][i][0] * mole_fraction) + (linelist["foreign-shift"][i][0] * (1 - mole_fraction))) * pressure
 
-        lims[i][0], lims[i][1] = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu)
+        lims[i][0], lims[i][1], calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu, dnu)
 
     lim0 = min(np.array(lims)[:,0])
     lim1 = max(np.array(lims)[:,1])

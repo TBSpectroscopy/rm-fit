@@ -49,7 +49,7 @@ def get_lines(linelist_file, spec_range, profile):
     with open(linelist_file) as f:
         for x, line in enumerate(f):
             if line.startswith("$LINE_PARAMETERS"):
-                startx = x+2
+                startx = x+1
                 break
 
     if startx == 0:
@@ -72,11 +72,12 @@ def get_lines(linelist_file, spec_range, profile):
                     par = {key : [] for key in parpos.keys() if key != "fit"}
                     par["line_position"] = []
             elif x >= startx:
-                if spec_range[0] < float(line[13:26]) < spec_range[1]:
-                    if parpos == dict():
-                        print("ERROR: Format not provided in {}".format(linelist_file))
-                        sys.exit()
-                    read_linelist(par, line, parpos, x)
+                if not (line.strip()).startswith("F") and not (line.strip()).startswith("%") and not line.strip() == "":
+                    if spec_range[0] < float(line[parpos["wavenumber"][0] : parpos["wavenumber"][1]]) < spec_range[1]:
+                        if parpos == dict():
+                            print("ERROR: Format not provided in {}".format(linelist_file))
+                            sys.exit()
+                        read_linelist(par, line, parpos, x)
     if mass <= 0.0:
         print("ERROR: absorber mass not provided in {}".format(linelist_file))
         sys.exit()
@@ -140,7 +141,7 @@ def read_linelist(par, line, parpos, x):
 
     for key in par.keys():
         if key != "line_position":
-            if key in ["wavenumber", "intensity", "self-broadening", "foreign-broadening", "self-shift", "foreign-shift", "line-mixing", "narrowing", "SD-broadening", "SD-shift"]:
+            if key in ["wavenumber", "intensity", "self-broadening", "foreign-broadening", "self-shift", "foreign-shift", "line-mixing", "narrowing", "SD-broadening", "SD-shift", "fbroad_temp"]:
                 if len(parpos[key]) == 3:
                     par[key].append((float(line[parpos[key][0] : parpos[key][1]]), False, 0.0))
                 elif len(parpos[key]) == 6:
