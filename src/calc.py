@@ -79,7 +79,7 @@ def calc_alpha(profile, spectrum_data, linelist_data, linelist, linelist_index, 
         else:
             alpha = calc_nosd_mat(pressure, spectrum_data["temperature"], mass, mole_fraction, xcal, linelist, offdiag, tips, vnu, lowest_value, profile)
 
-    alpha *= constants.physical_constants["Loschmidt constant (273.15 K, 100 kPa)"][0] * 1E-6 * (273.15 / spectrum_data["temperature"]) * (mole_fraction * pressure)
+    alpha *= constants.physical_constants["Loschmidt constant (273.15 K, 101.325 kPa)"][0] * 1E-6 * (273.15 / spectrum_data["temperature"]) * (mole_fraction * pressure)
 
     return alpha
 
