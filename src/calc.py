@@ -1,10 +1,11 @@
 #-------------------------------------------------------------------------------------------------
 #
 # Thibault BERTIN
-# Spectroscopy, Quantum Chemistry and Atmospheric Remote Sensing (SQUARES), C.P. 160/09
-# Universite Libre de Bruxelles
-# 50 avenue F. D. Roosevelt, B-1050 Brussels, Belgium
-# Phone: +32.2.650.24.18 - E-mail: thibault.bertin@ulb.be - Web: http://www.ulb.ac.be/cpm
+# Atomic and Molecular Physics
+# Center for Astrophysics | Harvard & Smithsonian
+# 60 Garden St., 02138 MA, USA
+# E-mail: thibault.bertin@cfa.harvard.edu
+#
 #
 #-------------------------------------------------------------------------------------------------
 
@@ -46,7 +47,7 @@ def calc_lims(lowest_value, doppler_width, lorentz_width, shift, nu0, vnu, dnu):
 #-------------------------------------------------------------------------------------------------
 # Calculate absorption cross section
 
-def calc_alpha(profile, spectrum_data, linelist_data, linelist, linelist_index, tips, vnu, xcal, offdiag = dict(), method = ""):
+def calc_alpha(profile, spectrum_data, linelist_data, linelist, linelist_index, tips, vnu, offdiag = dict(), method = ""):
     mass = linelist_data["mass"]
     mass_p = linelist_data["mass_perturbing"]
     pressure = spectrum_data["total_pressure"] / 1013.25
@@ -61,23 +62,23 @@ def calc_alpha(profile, spectrum_data, linelist_data, linelist, linelist_index, 
     if profile == "qsd_voigt":
         # There is not enough sampled points for v and cos(theta) at low pressure so we neglect line mixing for those
         if offdiag == dict():
-            alpha = calc_qsdvoigt(pressure, spectrum_data["temperature"], mass, mole_fraction, xcal, linelist, vnu, lowest_value)
+            alpha = calc_qsdvoigt(pressure, spectrum_data["temperature"], mass, mole_fraction, linelist, vnu, lowest_value)
     elif profile == "qsd_rautian":
         # There is not enough sampled points for v and cos(theta) at low pressure so we neglect line mixing for those
         if offdiag == dict() or spectrum_data["total_pressure"] < 10:
-            alpha = calc_qsdrautian(pressure, spectrum_data["temperature"], mass, mole_fraction, xcal, linelist, vnu, lowest_value)
+            alpha = calc_qsdrautian(pressure, spectrum_data["temperature"], mass, mole_fraction, linelist, vnu, lowest_value)
         else:
-            alpha = calc_sd_mat(pressure, spectrum_data["temperature"], mass, mass_p, mole_fraction, xcal, linelist, offdiag, tips, vnu, lowest_value, method)
+            alpha = calc_sd_mat(pressure, spectrum_data["temperature"], mass, mass_p, mole_fraction, linelist, offdiag, tips, vnu, lowest_value, method)
     elif profile == "rautian":
         if offdiag == dict():
-            alpha = calc_rautian(pressure, spectrum_data["temperature"], mass, mole_fraction, xcal, linelist, vnu, lowest_value)
+            alpha = calc_rautian(pressure, spectrum_data["temperature"], mass, mole_fraction, linelist, vnu, lowest_value)
         else:
-            alpha = calc_nosd_mat(pressure, spectrum_data["temperature"], mass, mole_fraction, xcal, linelist, offdiag, tips, vnu, lowest_value, profile)
+            alpha = calc_nosd_mat(pressure, spectrum_data["temperature"], mass, mole_fraction, linelist, offdiag, tips, vnu, lowest_value, profile)
     elif profile == "voigt":
         if offdiag == dict():
-            alpha = calc_voigt(pressure, spectrum_data["temperature"], mass, mole_fraction, xcal, linelist, vnu, lowest_value)
+            alpha = calc_voigt(pressure, spectrum_data["temperature"], mass, mole_fraction, linelist, vnu, lowest_value)
         else:
-            alpha = calc_nosd_mat(pressure, spectrum_data["temperature"], mass, mole_fraction, xcal, linelist, offdiag, tips, vnu, lowest_value, profile)
+            alpha = calc_nosd_mat(pressure, spectrum_data["temperature"], mass, mole_fraction, linelist, offdiag, tips, vnu, lowest_value, profile)
 
     alpha *= constants.physical_constants["Loschmidt constant (273.15 K, 101.325 kPa)"][0] * 1E-6 * (273.15 / spectrum_data["temperature"]) * (mole_fraction * pressure)
 
@@ -86,7 +87,7 @@ def calc_alpha(profile, spectrum_data, linelist_data, linelist, linelist_index, 
 #-------------------------------------------------------------------------------------------------
 # Calculate Voigt absorption cross section using Weideman algorithm from Py4CAtS
 
-def calc_voigt(pressure, temperature, mass, mole_fraction, xcal, linelist, vnu, lowest_value):
+def calc_voigt(pressure, temperature, mass, mole_fraction, linelist, vnu, lowest_value):
 
     sigma = np.zeros(len(vnu), dtype = np.double)
 
@@ -102,7 +103,7 @@ def calc_voigt(pressure, temperature, mass, mole_fraction, xcal, linelist, vnu, 
         lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu, dnu)
         if calc_check:
 
-            voigt = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, 0.0, shift, linelist["line-mixing"][i][0] * pressure) * linelist["intensity"][i][0]
+            voigt = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0], doppler_width, lorentz_width, 0.0, shift, linelist["line-mixing"][i][0] * pressure) * linelist["intensity"][i][0]
 
             sigma[lim0:lim1] += voigt
 
@@ -111,7 +112,7 @@ def calc_voigt(pressure, temperature, mass, mole_fraction, xcal, linelist, vnu, 
 #-------------------------------------------------------------------------------------------------
 # Calculate Rautian absorption cross section using Weideman algorithm from Py4CAtS
 
-def calc_rautian(pressure, temperature, mass, mole_fraction, xcal, linelist, vnu, lowest_value):
+def calc_rautian(pressure, temperature, mass, mole_fraction, linelist, vnu, lowest_value):
 
     sigma = np.zeros(len(vnu), dtype = np.double)
 
@@ -128,7 +129,7 @@ def calc_rautian(pressure, temperature, mass, mole_fraction, xcal, linelist, vnu
         lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu, dnu)
         if calc_check:
 
-            rau = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, narrowing, shift, linelist["line-mixing"][i][0] * pressure) * linelist["intensity"][i][0]
+            rau = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0], doppler_width, lorentz_width, narrowing, shift, linelist["line-mixing"][i][0] * pressure) * linelist["intensity"][i][0]
 
             sigma[lim0:lim1] += rau
 
@@ -137,7 +138,7 @@ def calc_rautian(pressure, temperature, mass, mole_fraction, xcal, linelist, vnu
 #-------------------------------------------------------------------------------------------------
 # Calculate qSDV absorption cross section using H. Tran et al's algorithm, "Efficient computation of some speed-dependent isolated line profiles", JQSRT 129 (2013) 199-203 and the corresponding erratum, JQSRT 134
 
-def calc_qsdvoigt(pressure, temperature, mass, mole_fraction, xcal, linelist, vnu, lowest_value):
+def calc_qsdvoigt(pressure, temperature, mass, mole_fraction, linelist, vnu, lowest_value):
 
     sigma = np.zeros(len(vnu), dtype = np.double)
 
@@ -156,7 +157,7 @@ def calc_qsdvoigt(pressure, temperature, mass, mole_fraction, xcal, linelist, vn
         lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu, dnu)
 
         if calc_check:
-            line_ri = [qSDV.qsdv(linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, sd_width, shift, sd_shift, vnu[j], LS_qSDV_R, LS_qSDV_I) for j in range(lim0, lim1, 1)]
+            line_ri = [qSDV.qsdv(linelist["wavenumber"][i][0], doppler_width, lorentz_width, sd_width, shift, sd_shift, vnu[j], LS_qSDV_R, LS_qSDV_I) for j in range(lim0, lim1, 1)]
             sigma[lim0:lim1] += np.array([(j[0] - (pressure * linelist["line-mixing"][i][0] * j[1])) * linelist["intensity"][i][0] for j in line_ri])
 
     return sigma
@@ -164,7 +165,7 @@ def calc_qsdvoigt(pressure, temperature, mass, mole_fraction, xcal, linelist, vn
 #-------------------------------------------------------------------------------------------------
 # Calculate qSDR absorption cross section using H. Tran et al's algorithm, "Efficient computation of some speed-dependent isolated line profiles", JQSRT 129 (2013) 199-203 and the corresponding erratum, JQSRT 134
 
-def calc_qsdrautian(pressure, temperature, mass, mole_fraction, xcal, linelist, vnu, lowest_value):
+def calc_qsdrautian(pressure, temperature, mass, mole_fraction, linelist, vnu, lowest_value):
 
     sigma = np.zeros(len(vnu), dtype = np.double)
 
@@ -185,7 +186,7 @@ def calc_qsdrautian(pressure, temperature, mass, mole_fraction, xcal, linelist, 
         lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu, dnu)
 
         if calc_check:
-            line_ri = [qSDHC.qsdhc(linelist["wavenumber"][i][0] * (1 + xcal), doppler_width, lorentz_width, sd_width, shift, sd_shift, narrowing, vnu[j], LS_qSDV_R, LS_qSDV_I) for j in range(lim0, lim1, 1)]
+            line_ri = [qSDHC.qsdhc(linelist["wavenumber"][i][0], doppler_width, lorentz_width, sd_width, shift, sd_shift, narrowing, vnu[j], LS_qSDV_R, LS_qSDV_I) for j in range(lim0, lim1, 1)]
             sigma[lim0:lim1] += np.array([(j[0] - (pressure * linelist["line-mixing"][i][0] * j[1])) * linelist["intensity"][i][0] for j in line_ri])
 
     return sigma
@@ -193,7 +194,7 @@ def calc_qsdrautian(pressure, temperature, mass, mole_fraction, xcal, linelist, 
 #-------------------------------------------------------------------------------------------------
 # Calculate hard collision absorption cross section using relaxation matrix
 
-def calc_nosd_mat(pressure, temperature, mass, mole_fraction, xcal, linelist, offdiag, tips, vnu, lowest_value, profile):
+def calc_nosd_mat(pressure, temperature, mass, mole_fraction, linelist, offdiag, tips, vnu, lowest_value, profile):
 
     lorentz_width = ((linelist["self-broadening"][0][0] * mole_fraction) + (linelist["foreign-broadening"][0][0] * (1 - mole_fraction))) * pressure
     dnu = ((vnu[-1] - vnu[0]) / (len(vnu) - 1))
@@ -206,7 +207,7 @@ def calc_nosd_mat(pressure, temperature, mass, mole_fraction, xcal, linelist, of
     c2_constant = 1.438776877 # cm K
 
     # Diagonal matrices containing the line positions and the narrowing coefficients
-    nu0 = np.diag([(i[0] * (1 + xcal)) for i in linelist["wavenumber"]])
+    nu0 = np.diag([(i[0]) for i in linelist["wavenumber"]])
     n_nu0 = len(linelist["wavenumber"])
     beta = np.diag([i[0] for i in linelist["narrowing"]]) * pressure
 
@@ -267,7 +268,7 @@ def calc_nosd_mat(pressure, temperature, mass, mole_fraction, xcal, linelist, of
 #-------------------------------------------------------------------------------------------------
 # Calculate uncorrelated speed-dependent (+ narrowing) absorption cross section using relaxation matrix
 
-def calc_sd_mat(pressure, temperature, mass, mass_p, mole_fraction, xcal, linelist, offdiag, tips, vnu, lowest_value, method):
+def calc_sd_mat(pressure, temperature, mass, mass_p, mole_fraction, linelist, offdiag, tips, vnu, lowest_value, method):
 
     c2_constant = 1.438776877 # cm K
 
@@ -282,7 +283,7 @@ def calc_sd_mat(pressure, temperature, mass, mass_p, mole_fraction, xcal, lineli
     mu = np.linspace(-1.0, 1.0, n_mu, dtype = np.double)
     
     # Diagonal matrices containing the line positions and the narrowing coefficients
-    nu0 = np.diag([(i[0] * (1 + xcal)) for i in linelist["wavenumber"]])
+    nu0 = np.diag([(i[0]) for i in linelist["wavenumber"]])
     n_nu0 = len(linelist["wavenumber"])
     beta = np.diag([i[0] for i in linelist["narrowing"]]) * pressure
 
@@ -322,28 +323,54 @@ def calc_sd_mat(pressure, temperature, mass, mass_p, mole_fraction, xcal, lineli
 
     return sigma
 
+#---------------------------------------------------------------------------------------------------
 
-#-------------------------------------------------------------------------------------------------
-# Calculate the spectrum using ILS * (e^{alpha l})
+# Calibrate the spectrum ---------------------------------------------------------------------------
+def calibrate_spectrum(nu, trans, xcal, baseline = [], extrapolate : bool = False):
+    nnu = [i * (1 - xcal) for i in nu]
+    interplot = interpolate.interp1d(nnu, trans, kind = "cubic")
+    nu0 = nnu[0]
+    nu1 = nnu[-1]
+    nnu = [i for i in nu if nu0 <= i <= nu1]
+    ntrans = interplot(nnu)
+    if extrapolate:
+        if nu[0] < nnu[0]:
+            ntrans = np.concatenate((baseline[0 : int(len(nu) - len(nnu))], ntrans), axis = None)
+        elif nu[-1] > nnu[-1]:
+            ntrans = np.concatenate((ntrans, baseline[len(nnu):]), axis = None)
+        return [nu, np.array(ntrans)]
+    return [np.array(nnu), np.array(ntrans)]
 
-def calc_spectrum(spectral_data, spectrum_index, linelists, offdiags, nu):
+#---------------------------------------------------------------------------------------------------
+
+# Calculate the spectrum using ILS * (e^{alpha l}) -------------------------------------------------
+
+def calc_spectrum(spectral_data, spectrum_index, linelists, offdiags, nu, apply_xcal : bool = True):
 
     #Resampling
+
     nu = nu[0::spectral_data["spectra"][spectrum_index]["downsample_factor"]]
     lnu = 0
     for j in range(0, len(nu), 1):
         if j % spectral_data["spectra"][spectrum_index]["downsample_factor"] == 0:
             lnu = j
+
+    if apply_xcal:
+        nu_inter = (nu[-1] - nu[0] / (len(nu) - 1))
+        nnu = [i * (1 - spectral_data["calculation"]["x_calibration_factor"]) for i in nu]
+        nu = np.array(nnu)
+        del nnu
+
     alpha = np.zeros(nu.shape[0], dtype = np.double)
 
     for j in range(0, len(linelists), 1):
         tips_ = tips.get_tips(spectral_data["linelists"][j]["tips"], spectral_data["spectra"][spectrum_index]["temperature"])
         for k in range(0, len(offdiags[j]), 1):
-            alpha += calc_alpha(spectral_data["calculation"]["line_profile"], spectral_data["spectra"][spectrum_index], spectral_data["linelists"][j], linelists[j][k], j, tips_, nu, spectral_data["calculation"]["x_calibration_factor"], offdiags[j][k], spectral_data["calculation"]["method"])
+            alpha += calc_alpha(spectral_data["calculation"]["line_profile"], spectral_data["spectra"][spectrum_index], spectral_data["linelists"][j], linelists[j][k], j, tips_, nu, offdiags[j][k], spectral_data["calculation"]["method"])
 
 
         if linelists[j] != []:
-            alpha += calc_alpha(spectral_data["calculation"]["line_profile"], spectral_data["spectra"][spectrum_index], spectral_data["linelists"][j], linelists[j][-1], j, tips_, nu, spectral_data["calculation"]["x_calibration_factor"])
+            alpha += calc_alpha(spectral_data["calculation"]["line_profile"], spectral_data["spectra"][spectrum_index], spectral_data["linelists"][j], linelists[j][-1], j, tips_, nu)
 
 
     if spectral_data["spectra"][spectrum_index]["downsample_factor"] != 1:
@@ -360,6 +387,7 @@ def calc_spectrum(spectral_data, spectrum_index, linelists, offdiags, nu):
         transmittance = np.concatenate(([transmittance[0]]*int(len(ils)/2), transmittance), axis = None)
         transmittance = np.concatenate((transmittance, [transmittance[-1]]*int(len(ils)/2)), axis = None)
         transmittance = signal.fftconvolve(transmittance, ils, mode = "valid") * ((nu[-1] - nu[0]) / (len(nu) - 1))
+
     transmittance *= calc_baseline(spectral_data["spectra"][spectrum_index]["baseline"], nu)
 
     return transmittance.real

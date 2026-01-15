@@ -1,3 +1,11 @@
+#---------------------------------------------------------------------------------------------------
+# Thibault BERTIN
+# Atomic and Molecular Physics
+# Center for Astrophysics | Harvard & Smithsonian
+# 60 Garden St., 02138 MA, USA
+# E-mail: thibault.bertin@cfa.harvard.edu
+#---------------------------------------------------------------------------------------------------
+
 import os
 import sys
 import datetime

@@ -1,10 +1,10 @@
 #-------------------------------------------------------------------------------------------------
 #
 # Thibault BERTIN
-# Spectroscopy, Quantum Chemistry and Atmospheric Remote Sensing (SQUARES), C.P. 160/09
-# Universite Libre de Bruxelles
-# 50 avenue F. D. Roosevelt, B-1050 Brussels, Belgium
-# Phone: +32.2.650.24.18 - E-mail: thibault.bertin@ulb.be - Web: http://www.ulb.ac.be/cpm
+# Atomic and Molecular Physics
+# Center for Astrophysics | Harvard & Smithsonian
+# 60 Garden St., 02138 MA, USA
+# E-mail: thibault.bertin@cfa.harvard.edu
 #
 #-------------------------------------------------------------------------------------------------
 
@@ -210,7 +210,7 @@ def get_bounds(params_id):
     return (bound_min, bound_max)
 
 #-------------------------------------------------------------------------------------------------
-def recalc_spectrum(params, spec_index, *args):
+def recalc_spectrum(params, spec_index, *args, apply_xcal : bool = True):
 
     # Update parameters
     update_parameters(params, *args)
@@ -226,7 +226,7 @@ def recalc_spectrum(params, spec_index, *args):
     # Get n_points for single spectrum
     n_nu = round(len(nu)/len(spectral_data["spectra"]))
     
-    return calc.calc_spectrum(spectral_data, spec_index, linelists, offdiags, nu[0:n_nu])
+    return calc.calc_spectrum(spectral_data, spec_index, linelists, offdiags, nu[0:n_nu], apply_xcal = apply_xcal)
 
 
 #-------------------------------------------------------------------------------------------------

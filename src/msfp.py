@@ -1,10 +1,10 @@
 #-------------------------------------------------------------------------------------------------
 #
 # Thibault BERTIN
-# Spectroscopy, Quantum Chemistry and Atmospheric Remote Sensing (SQUARES), C.P. 160/09
-# Universite Libre de Bruxelles
-# 50 avenue F. D. Roosevelt, B-1050 Brussels, Belgium
-# Phone: +32.2.650.24.18 - E-mail: thibault.bertin@ulb.be - Web: http://www.ulb.ac.be/cpm
+# Atomic and Molecular Physics
+# Center for Astrophysics | Harvard & Smithsonian
+# 60 Garden St., 02138 MA, USA
+# E-mail: thibault.bertin@cfa.harvard.edu
 #
 #-------------------------------------------------------------------------------------------------
 
@@ -33,15 +33,12 @@ def msfp(control_file, option):
     if spectral_data == dict() :
         return
 
-    if spectral_data["calculation"]["output_path"][-1] == os.sep :
-        spectral_data["calculation"]["output_path"] = spectral_data["calculation"]["output_path"][:-1]
-
     fold_path = ''
     folders = spectral_data["calculation"]["output_path"].split(os.sep)
     for i in range(0, len(folders) - 1, 1):
         fold_path = "{}{}{}".format(fold_path, folders[i], os.sep)
         if not os.path.exists(fold_path):
-            print("WARNING: creating the non-existent output directoy provided (\"{}\")" \
+            print("WARNING: creating the non-existent output directory provided (\"{}\")" \
             .format(fold_path))
             os.mkdir(fold_path)
     
@@ -54,6 +51,9 @@ def msfp(control_file, option):
     nu = np.array([], dtype = np.double)
     for i in range(0, len(spectral_data["spectra"]), 1):
         spec = opus.readSpectrum(spectral_data["spectra"][i]["spectrum"], spectral_data["calculation"]["range"])
+        #spec = calc.calibrate_spectrum(spec[0], spec[1], spectral_data["calculation"]["x_calibration_factor"], spectral_data["spectra"][i]["baseline"])
+        # Bad idea to calibrate the spectrum before fitting. The more abs(xcalibration) increases in the fit, the more experimental data is lost.
+        # Calibration should be applied to the calculations during the fit, and to the experiment after.
         nu = spec[0]
         if len(spec[0]) < 2:
             print("ERROR: spectral region in control file is out of boundaries of experiment.\nRM-Fit is a fitting software and does not currently support calculations without a spectrum file. For these use cases we recommend HAPI or HAPI2.")
@@ -65,45 +65,67 @@ def msfp(control_file, option):
 
     params_id, params = fit.group_fitted_parameters(spectral_fit, line_fit) # Concatenate all parameters into one array
 
+    # Check if file is a directory
+    if os.path.isdir(spectral_data["calculation"]["output_path"]):
+        print("\nOutput set to folder.\nUsing {}rm-fit_out as output files".format(spectral_data["calculation"]["output_path"] + ("/" * (spectral_data["calculation"]["output_path"][-1] != os.sep))))
+        spectral_data["calculation"]["output_path"] = spectral_data["calculation"]["output_path"] + ("/" * (spectral_data["calculation"]["output_path"][-1] != os.sep)) +"rm-fit_out"
+
+    # Check before overwriting files
+    spectral_data["calculation"]["output_path"] = os.path.splitext(spectral_data["calculation"]["output_path"])[0] # Remove extension
+    spectral_data["calculation"]["log_file"] = os.path.splitext(spectral_data["calculation"]["output_path"])[0] # Remove extension
+    if os.path.exists("{}.txt".format(spectral_data["calculation"]["output_path"])) or os.path.exists("{}_spectra.txt".format(spectral_data["calculation"]["output_path"])):
+        print("\nOutput file exists already.")
+        overwrite = input("Do you want to overwrite it? (y/n)\n") == "y"
+        if not overwrite:
+            count = 1
+            spectral_data["calculation"]["output_path"] = "{}_{:d}".format(spectral_data["calculation"]["output_path"], count) # Add _1 to the file name
+            while os.path.exists("{}.txt".format(spectral_data["calculation"]["output_path"])) or os.path.exists("{}_spectra.txt".format(spectral_data["calculation"]["output_path"])): # Increase number of _n if file exists
+                count += 1
+                dlen = len(spectral_data["calculation"]["output_path"].split("_")[-1])
+                spectral_data["calculation"]["output_path"] = "{}{:d}".format(spectral_data["calculation"]["output_path"][:-dlen], count)
+
     # Either fit ("-f") or calculate ("-c") spectra depending on command parameter
     if option == "-f":
 
-        if spectral_data["calculation"]["output_path"][-1] == os.sep :  # Remove folder separator
-            spectral_data["calculation"]["output_path"] = spectral_data["calculation"]["output_path"][:-1]
-
-        spectral_data["calculation"]["output_path"] = os.path.splitext(spectral_data["calculation"]["output_path"])[0] # Remove extension
-        spectral_data["calculation"]["log_file"] = os.path.splitext(spectral_data["calculation"]["output_path"])[0] # Remove extension
-        if os.path.exists("{}.txt".format(spectral_data["calculation"]["output_path"])):
-            print("\nOutput file exists already.")
-            overwrite = input("Do you want to overwrite it? (y/n)\n") == "y"
-            if not overwrite:
-                count = 1
-                spectral_data["calculation"]["output_path"] = "{}_{:d}".format(spectral_data["calculation"]["output_path"], count)
-                while os.path.exists("{}.txt".format(spectral_data["calculation"]["output_path"])):
-                    count += 1
-                    dlen = len(spectral_data["calculation"]["output_path"].split("_")[-1])
-                    spectral_data["calculation"]["output_path"] = "{}{:d}".format(spectral_data["calculation"]["output_path"][:-dlen], count)
-
         y_resid = fit.fit_spectra(params, specs, params_id, len(spectral_fit), spectral_data, linelists, offdiags)
-        y_calc = y_resid + specs[1]
+
+        y_calc = np.array([])
+        n_nu = int(round(len(specs[0])/len(spectral_data["spectra"])))
+        spec_calib = [np.array([], dtype = np.double), np.array([], dtype = np.double)]
+        for i in range(0, len(spectral_data["spectra"]), 1):
+            calib = calc.calibrate_spectrum(nu, specs[1][n_nu * i : n_nu * (i + 1)], spectral_data["calculation"]["x_calibration_factor"])
+            spec_calib[0] = np.concatenate((spec_calib[0], calib[0]), axis = None)
+            spec_calib[1] = np.concatenate((spec_calib[1], calib[1]), axis = None)
+        del specs
+        for i in range(0, len(spectral_data["spectra"]), 1):
+            y_calc = np.concatenate((y_calc, calc.calc_spectrum(spectral_data, i, linelists, offdiags, spec_calib[0], apply_xcal = False)), axis = None)
+
+        y_resid = spec_calib[1] - y_calc
 
         
         spec_filename = "{}_spectra.txt".format(os.path.splitext(spectral_data["calculation"]["output_path"])[0])
         with open(spec_filename, "w") as f:
-            for i in range(0, len(specs[0]), 1):
-                f.write("{:18.10f}{:17.7E}{:17.7E}{:17.7E}\n".format(specs[0][i], specs[1][i], y_calc[i], -y_resid[i]))
+            for i in range(0, len(spec_calib[0]), 1):
+                f.write("{:18.10f}{:17.7E}{:17.7E}{:17.7E}\n".format(spec_calib[0][i], spec_calib[1][i], y_calc[i], y_resid[i]))
 
         return
 
     elif option == "-c":
         y_calc = np.array([])
+        n_nu = int(round(len(specs[0])/len(spectral_data["spectra"])))
+        spec_calib = [np.array([], dtype = np.double), np.array([], dtype = np.double)]
         for i in range(0, len(spectral_data["spectra"]), 1):
-            y_calc = np.concatenate((y_calc, fit.recalc_spectrum(params, i, specs, params_id, len(spectral_fit), spectral_data, linelists, offdiags)), axis = None)
+            calib = calc.calibrate_spectrum(nu, specs[1][n_nu * i : n_nu * (i + 1)], spectral_data["calculation"]["x_calibration_factor"])
+            spec_calib[0] = np.concatenate((spec_calib[0], calib[0]), axis = None)
+            spec_calib[1] = np.concatenate((spec_calib[1], calib[1]), axis = None)
+        del specs
+        for i in range(0, len(spectral_data["spectra"]), 1):
+            y_calc = np.concatenate((y_calc, fit.recalc_spectrum(params, i, spec_calib, params_id, len(spectral_fit), spectral_data, linelists, offdiags, apply_xcal = False)), axis = None)
 
         spec_filename = "{}_spectra.txt".format(os.path.splitext(spectral_data["calculation"]["output_path"])[0])
         with open(spec_filename, "w") as f:
-            for i in range(0, len(specs[0]), 1):
-                f.write("{:18.10f}{:17.7E}{:17.7E}{:17.7E}\n".format(specs[0][i], specs[1][i], y_calc[i], specs[1][i] - y_calc[i]))
+            for i in range(0, len(spec_calib[0]), 1):
+                f.write("{:18.10f}{:17.7E}{:17.7E}{:17.7E}\n".format(spec_calib[0][i], spec_calib[1][i], y_calc[i], spec_calib[1][i] - y_calc[i]))
 
 
     return

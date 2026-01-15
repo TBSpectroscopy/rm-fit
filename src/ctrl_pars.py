@@ -1,10 +1,10 @@
 #-------------------------------------------------------------------------------------------------
 #
 # Thibault BERTIN
-# Spectroscopy, Quantum Chemistry and Atmospheric Remote Sensing (SQUARES), C.P. 160/09
-# Universite Libre de Bruxelles
-# 50 avenue F. D. Roosevelt, B-1050 Brussels, Belgium
-# Phone: +32.2.650.24.18 - E-mail: thibault.bertin@ulb.be - Web: http://www.ulb.ac.be/cpm
+# Atomic and Molecular Physics
+# Center for Astrophysics | Harvard & Smithsonian
+# 60 Garden St., 02138 MA, USA
+# E-mail: thibault.bertin@cfa.harvard.edu
 #
 #-------------------------------------------------------------------------------------------------
 

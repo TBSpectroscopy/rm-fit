@@ -71,7 +71,7 @@ python3 rm-fit.py [option] [input_file]
 
 An example is provided in `data/input/` named `ch4_co2.txt`. The input file contains all the relevant information to calculate spectra. It is separated into blocks marked by a '$' symbol followed by a name. What follows the name on the same line is ignored. All file/folder paths inside must be absolute or relative to the location of the input file.
 
-`$SPECTRUM` contains all the information specific to one spectrum. Can be as many as needed. Note that this repository does not provide the spectrum to run the example input. [However, we do provide it as a download here.](https://owncloud.ulb.ac.be/index.php/s/yLinSsQ1t480Qxc/download)
+`$SPECTRUM` contains all the information specific to one spectrum. Can be as many as needed. Note that this repository does not provide the spectrum to run the example input. [However, we do provide it as a download here](https://owncloud.ulb.ac.be/index.php/s/yLinSsQ1t480Qxc/download) or [here.](https://www.dropbox.com/scl/fi/bdo6sxd3lfg1p3lz7tbmt/ch4_co2_spec.txt?rlkey=iw2mq2r02skcasxabfyp2h6na&st=ox0a3jlx&dl=1)
 
 `$LINELIST` contains the inputs for a species/isotopologue line list (diagonals and off-diagonals). Can be as many as needed
 
