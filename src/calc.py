@@ -347,6 +347,8 @@ def calibrate_spectrum(nu, trans, xcal, baseline = [], extrapolate : bool = Fals
 
 def calc_spectrum(spectral_data, spectrum_index, linelists, offdiags, nu, apply_xcal : bool = True):
 
+    spectrum_form = spectral_data["spectra"][spectrum_index]["form"]
+
     #Resampling
 
     nu = nu[0::spectral_data["spectra"][spectrum_index]["downsample_factor"]]
@@ -368,7 +370,6 @@ def calc_spectrum(spectral_data, spectrum_index, linelists, offdiags, nu, apply_
         for k in range(0, len(offdiags[j]), 1):
             alpha += calc_alpha(spectral_data["calculation"]["line_profile"], spectral_data["spectra"][spectrum_index], spectral_data["linelists"][j], linelists[j][k], j, tips_, nu, offdiags[j][k], spectral_data["calculation"]["method"])
 
-
         if linelists[j] != []:
             alpha += calc_alpha(spectral_data["calculation"]["line_profile"], spectral_data["spectra"][spectrum_index], spectral_data["linelists"][j], linelists[j][-1], j, tips_, nu)
 
@@ -381,16 +382,31 @@ def calc_spectrum(spectral_data, spectrum_index, linelists, offdiags, nu, apply_
             alpha = np.append(alpha, [alpha[-1]] * (len(nu) - len(alpha)), axis = None)
 
 
-    transmittance = generate_transmittance(alpha, spectral_data["spectra"][spectrum_index]["path_length"])
-    if spectral_data["spectra"][spectrum_index]["ils_type"][0] == "external":
-        ils = get_ILS(spectral_data["spectra"][spectrum_index]["ils_type"][1], nu[int(nu.size / 2)], nu)
-        transmittance = np.concatenate(([transmittance[0]]*int(len(ils)/2), transmittance), axis = None)
-        transmittance = np.concatenate((transmittance, [transmittance[-1]]*int(len(ils)/2)), axis = None)
-        transmittance = signal.fftconvolve(transmittance, ils, mode = "valid") * ((nu[-1] - nu[0]) / (len(nu) - 1))
+    if spectrum_form == "absorption_coefficient":
+        return alpha.real
 
-    transmittance *= calc_baseline(spectral_data["spectra"][spectrum_index]["baseline"], nu)
+    elif spectrum_form == "absorption_cross-section":
+        mole_fraction = 1.0
+        cross = np.zeros(nu.shape[0], dtype = np.double)
+        for j in range(0, len(linelists), 1):
+            for i in spectrum_data["mole_fraction"]:
+                if j + 1 in i[1]:
+                    mole_fraction = i[0]
+            cross += alpha / (constants.physical_constants["Loschmidt constant (273.15 K, 101.325 kPa)"][0] * 1E-6 * (273.15 / spectrum_data["temperature"]) * (mole_fraction * spectrum_data["total_pressure"] / 1013.25))
 
-    return transmittance.real
+        return cross.real
+
+    elif spectrum_form == "transmittance":
+        transmittance = generate_transmittance(alpha, spectral_data["spectra"][spectrum_index]["path_length"])
+        if spectral_data["spectra"][spectrum_index]["ils_type"][0] == "external":
+            ils = get_ILS(spectral_data["spectra"][spectrum_index]["ils_type"][1], nu[int(nu.size / 2)], nu)
+            transmittance = np.concatenate(([transmittance[0]]*int(len(ils)/2), transmittance), axis = None)
+            transmittance = np.concatenate((transmittance, [transmittance[-1]]*int(len(ils)/2)), axis = None)
+            transmittance = signal.fftconvolve(transmittance, ils, mode = "valid") * ((nu[-1] - nu[0]) / (len(nu) - 1))
+
+        transmittance *= calc_baseline(spectral_data["spectra"][spectrum_index]["baseline"], nu)
+
+        return transmittance.real
 
 
 #-------------------------------------------------------------------------------------------------

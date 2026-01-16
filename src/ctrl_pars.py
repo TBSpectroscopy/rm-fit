@@ -47,6 +47,8 @@ def get(control_file):
             if blocpos[i]["type"] == "spectrum":
                 if control[j].startswith("file ="):
                     spec[count_spectra]["spectrum"] = get_parameter(j, control[j])
+                elif control[j].startswith("form ="):
+                    spec[count_spectra]["form"] = get_parameter(j, control[j])
                 elif control[j].startswith("baseline ="):
                     spec[count_spectra]["baseline"] = [parse_fit(i)[0] for i in (get_parameter(j, control[j]).split())]
                     truth = [parse_fit(i)[1] for i in (get_parameter(j, control[j]).split())]

@@ -197,19 +197,21 @@ def separate_lines(offdiag, linelist, offdiag_parpos):
     if len(names) != 0:
         namepos = [0, offdiag_parpos["name_1"][1] - offdiag_parpos["name_1"][0], offdiag_parpos["name_1"][1] - offdiag_parpos["name_1"][0] + 1, (2 * (offdiag_parpos["name_1"][1] - offdiag_parpos["name_1"][0])) + 1]
     blocknames = []
-    count = 0
     offdiag_blocks = []
     linelist_blocks = []
+    added = False
     while len(names) != 0:
-        if count % 2 == 0:  # One line is associated to every other lines it is coupled with. Therefore a single pass gives all the mixed lines, and a second gives all the combinations.
+        if not added: # If no line is matched, all the combinations of the block were found
             blocknames.append([names[-1][namepos[0] : namepos[1]], names[-1][namepos[2] : namepos[3]]])
             offdiag_blocks.append({"names": [], "line-mixing": []})
+        added = False
         for i in range(len(names)-1, -1, -1):
             if names[i][namepos[0] : namepos[1]] in blocknames[-1]:
                 offdiag_blocks[-1]["names"].append(names[i])
                 offdiag_blocks[-1]["line-mixing"].append(value[i])
                 if not names[i][namepos[2] : namepos[3]] in blocknames[-1]:
                     blocknames[-1].append(names[i][namepos[2] : namepos[3]])
+                    added = True
                 del names[i]
                 del value[i]
             elif names[i][namepos[2] : namepos[3]] in blocknames[-1]:
@@ -217,9 +219,9 @@ def separate_lines(offdiag, linelist, offdiag_parpos):
                 offdiag_blocks[-1]["line-mixing"].append(value[i])
                 if not names[i][namepos[0] : namepos[1]] in blocknames[-1]:
                     blocknames[-1].append(names[i][namepos[0] : namepos[1]])
+                    added = True
                 del names[i]
                 del value[i]
-        count += 1
 
     linelist_temp = {key:value for key, value in linelist.items()}
     for i in range(0, len(blocknames), 1):
