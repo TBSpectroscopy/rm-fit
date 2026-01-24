@@ -28,7 +28,7 @@ def readSpectrum(spec_file, nu_range):
                 float(split[0])
                 float(split[1])
             except:
-                print("ERROR: \"{}\" unrecognized spectrum file type\nOnly Opus and text files are allowed\n\nText files must contain 1 column for the wavenumber, and one for the transmittance. The columns must be separated by spaces/tab's".format(spec_file))
+                print("ERROR: \"{}\" unrecognized spectrum file type\nOnly Opus and text files are allowed\n\nText files must contain 1 column for the wavenumber, and one for the signal. The columns must be separated by spaces/tab's".format(spec_file))
                 sys.exit(1)
 
         return readAscii(spec_file, nu_range)

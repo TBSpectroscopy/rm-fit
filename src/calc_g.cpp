@@ -44,7 +44,7 @@ Eigen::MatrixXcd integrate(const std::vector<Eigen::MatrixXcd> &arr, double inte
 
 
 /** Calculate the absorption cross section for given lines using matrix inversions **/
-pybind11::array_t<double> calc_abs(pybind11::array_t<double> vnu, pybind11::array_t<double> v, pybind11::array_t<double> mu, double vp, Eigen::MatrixXd nu0, Eigen::MatrixXd beta, Eigen::MatrixXd rho, Eigen::VectorXd X, std::vector<Eigen::MatrixXcd> W)
+pybind11::array_t<double> calc_abs(pybind11::array_t<double> vnu, pybind11::array_t<double> v, pybind11::array_t<double> mu, double vp, Eigen::MatrixXd nu0, Eigen::MatrixXd beta, Eigen::MatrixXd rho, Eigen::VectorXd X, std::vector<Eigen::MatrixXcd> W, double temperature)
 {
     int n_nu = vnu.size();
     int n_nu0 = nu0.rows();
@@ -103,7 +103,7 @@ pybind11::array_t<double> calc_abs(pybind11::array_t<double> vnu, pybind11::arra
         vec.noalias() = brack * X;
         Eigen::Matrix<std::complex<double>, 1, 1> sigmac;
         sigmac.noalias() = X.transpose() * vec;
-        vsigma[i] = sigmac(0,0).real() * anu[i] * (1.0 - std::exp(-c2_constant * anu[i])) / M_PI;
+        vsigma[i] = sigmac(0,0).real() * anu[i] * (1.0 - std::exp(-c2_constant * anu[i] / temperature)) / M_PI;
     }
     //std::cout << std::endl;
     pybind11::array sigma =  pybind11::cast(vsigma);
@@ -113,7 +113,7 @@ pybind11::array_t<double> calc_abs(pybind11::array_t<double> vnu, pybind11::arra
 
 
 /** Calculate the speed-dependent absorption cross section for given lines using partial matrix diagonalization **/
-pybind11::array_t<double> calc_abs_diag(pybind11::array_t<double> vnu, pybind11::array_t<double> v, pybind11::array_t<double> mu, double vp, Eigen::MatrixXd nu0, Eigen::MatrixXd beta, Eigen::MatrixXd rho, Eigen::VectorXd X, std::vector<Eigen::MatrixXcd> W)
+pybind11::array_t<double> calc_abs_diag(pybind11::array_t<double> vnu, pybind11::array_t<double> v, pybind11::array_t<double> mu, double vp, Eigen::MatrixXd nu0, Eigen::MatrixXd beta, Eigen::MatrixXd rho, Eigen::VectorXd X, std::vector<Eigen::MatrixXcd> W, double temperature)
 {
     int n_nu = vnu.size();
     int n_nu0 = nu0.rows();
@@ -181,7 +181,7 @@ pybind11::array_t<double> calc_abs_diag(pybind11::array_t<double> vnu, pybind11:
         vec.noalias() = brack * X;
         Eigen::Matrix<std::complex<double>, 1, 1> sigmac;
         sigmac.noalias() = X.transpose() * vec;
-        vsigma[i] = sigmac(0,0).real() * anu[i] * (1.0 - std::exp(-c2_constant * anu[i])) / M_PI;
+        vsigma[i] = sigmac(0,0).real() * anu[i] * (1.0 - std::exp(-c2_constant * anu[i] / temperature)) / M_PI;
     }
     //std::cout << std::endl;
     pybind11::array sigma =  pybind11::cast(vsigma);
@@ -189,7 +189,7 @@ pybind11::array_t<double> calc_abs_diag(pybind11::array_t<double> vnu, pybind11:
 }
 
 /** Calculate the absorption cross section for given lines using matrix inversions and incorporating the coupling into the correlation matrix **/
-pybind11::array_t<double> calc_abs_corr(pybind11::array_t<double> vnu, pybind11::array_t<double> v, pybind11::array_t<double> mu, double vp, Eigen::MatrixXd nu0, Eigen::MatrixXd beta, Eigen::MatrixXd rho, Eigen::VectorXd X, Eigen::MatrixXcd C, std::vector<Eigen::MatrixXcd> W)
+pybind11::array_t<double> calc_abs_corr(pybind11::array_t<double> vnu, pybind11::array_t<double> v, pybind11::array_t<double> mu, double vp, Eigen::MatrixXd nu0, Eigen::MatrixXd beta, Eigen::MatrixXd rho, Eigen::VectorXd X, Eigen::MatrixXcd C, std::vector<Eigen::MatrixXcd> W, double temperature)
 {
     int n_nu = vnu.size();
     int n_nu0 = nu0.rows();
@@ -250,7 +250,7 @@ pybind11::array_t<double> calc_abs_corr(pybind11::array_t<double> vnu, pybind11:
         vec.noalias() = brack * X;
         Eigen::Matrix<std::complex<double>, 1, 1> sigmac;
         sigmac.noalias() = X.transpose() * vec;
-        vsigma[i] = sigmac(0,0).real() * anu[i] * (1.0 - std::exp(-c2_constant * anu[i])) / M_PI;
+        vsigma[i] = sigmac(0,0).real() * anu[i] * (1.0 - std::exp(-c2_constant * anu[i] / temperature)) / M_PI;
     }
     //std::cout << std::endl;
     pybind11::array sigma =  pybind11::cast(vsigma);

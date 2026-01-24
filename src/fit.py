@@ -224,9 +224,9 @@ def recalc_spectrum(params, spec_index, *args, apply_xcal : bool = True):
     offdiags = args[5]
 
     # Get n_points for single spectrum
-    n_nu = round(len(nu)/len(spectral_data["spectra"]))
+    lims = spectral_data["spectra"][spec_index]["delimitations"]
     
-    return calc.calc_spectrum(spectral_data, spec_index, linelists, offdiags, nu[0:n_nu], apply_xcal = apply_xcal)
+    return calc.calc_spectrum(spectral_data, spec_index, linelists, offdiags, nu[lims[0] : lims[1]], apply_xcal = apply_xcal)
 
 
 #-------------------------------------------------------------------------------------------------
@@ -248,37 +248,44 @@ def calc_jac(params, *args):
     y0 = np.array([])
     for i in range(0, len(spectral_data["spectra"]), 1):
         y0 = np.concatenate((y0, recalc_spectrum(params, i, *args)), axis = None)
-    n_nu = round(len(nu)/len(spectral_data["spectra"]))
 
     jac = np.zeros((len(nu), len(params_id)), dtype = np.double)
 
-    # Calculate transmittance from calculated spectrum (neglect ils)
+    lims = [[spectral_data["spectra"][i]["delimitations"][0], spectral_data["spectra"][i]["delimitations"][1]] for i in range(0, len(spectral_data["spectra"]), 1)]
+
+    # Calculate signal without baseline from calculated spectrum (used for baseline derivative)
     transmittance = []
     for i in range(0, len(spectral_data["spectra"]), 1):
-        transmittance.append(y0[n_nu * i : n_nu * (i + 1)] / calc.calc_baseline(spectral_data["spectra"][params_id[i][0]]["baseline"], nu[0:n_nu]))
+        if spectral_data["spectra"][i]["form"] == "transmittance":
+            transmittance.append(y0[lims[i][0] : lims[i][1]] / calc.calc_baseline(spectral_data["spectra"][params_id[i][0]]["baseline"], nu[lims[i][0] : lims[i][1]]))
+        elif spectral_data["spectra"][i]["form"] == "absorption_coefficient":
+            transmittance.append(y0[lims[i][0] : lims[i][1]] - calc.calc_baseline(spectral_data["spectra"][params_id[i][0]]["baseline"], nu[lims[i][0] : lims[i][1]]))
 
     # Estimate dy/dx
     params = [i for i in params]
-    x = nu[0:n_nu] - ((nu[-1] + nu[0])/2)
     for i in range(0, ns, 1):   # Parameters inside input file
         dx = np.abs(0.001 * params[i])
         params[i] += dx
         print("{} {}".format(params_id[i], params[i]))
         if params_id[i][1].split()[0] == "baseline":
-            jac[n_nu * params_id[i][0] : n_nu * (params_id[i][0] + 1), i] = transmittance[params_id[i][0]] * (x ** int(params_id[i][1].split()[1]))
+            x = nu[lims[params_id[i][0]][0] : lims[params_id[i][0]][1]] - ((nu[lims[params_id[i][0]][1] - 1] + nu[lims[params_id[i][0]][0]])/2)
+            if spectral_data["spectra"][params_id[i][0]]["form"] == "transmittance":
+                jac[lims[params_id[i][0]][0] : lims[params_id[i][0]][1], i] = transmittance[params_id[i][0]] * (x ** int(params_id[i][1].split()[1]))
+            elif spectral_data["spectra"][params_id[i][0]]["form"] == "absorption_coefficient":
+                jac[lims[params_id[i][0]][0] : lims[params_id[i][0]][1], i] = x ** int(params_id[i][1].split()[1])
         elif params_id[i][0] == None:
             if dx != 0.0:
                 for j in range(0, len(spectral_data["spectra"]), 1):
-                    dy = recalc_spectrum(params, j, *args) - y0[n_nu * j : n_nu * (j + 1)]
-                    jac[n_nu * j : n_nu * (j + 1), i] = dy/dx
+                    dy = recalc_spectrum(params, j, *args) - y0[lims[j][0] : lims[j][1]]
+                    jac[lims[j][0] : lims[j][1], i] = dy/dx
             else:
                 jac[:,i] = np.zeros(len(nu), dtype = np.double)
         else:
             if dx != 0.0:
-                dy = recalc_spectrum(params, params_id[i][0], *args) - y0[n_nu * params_id[i][0] : n_nu * (params_id[i][0] + 1)]
-                jac[n_nu * params_id[i][0] : n_nu * (params_id[i][0] + 1), i] = dy/dx
+                dy = recalc_spectrum(params, params_id[i][0], *args) - y0[lims[params_id[i][0]][0] : lims[params_id[i][0]][1]]
+                jac[lims[params_id[i][0]][0] : lims[params_id[i][0]][1], i] = dy/dx
             else:
-                jac[n_nu * params_id[i][0] : n_nu * (params_id[i][0] + 1), i] = np.zeros(n_nu, dtype = np.double)
+                jac[lims[params_id[i][0]][0] : lims[params_id[i][0]][1], i] = np.zeros(lims[params_id[i][0]][1] - lims[params_id[i][0]][0], dtype = np.double)
 
 
         params[i] -= dx
@@ -291,8 +298,8 @@ def calc_jac(params, *args):
         print("{} {}".format(params_id[i], params[i]))
         if dx != 0.0:
             for j in range(0, len(spectral_data["spectra"]), 1):
-                dy = recalc_spectrum(params, j, *args) - y0[n_nu * j : n_nu * (j + 1)]
-                jac[n_nu * j : n_nu * (j + 1), i] = dy/dx
+                dy = recalc_spectrum(params, j, *args) - y0[lims[j][0] : lims[j][1]]
+                jac[lims[j][0] : lims[j][1], i] = dy/dx
         else:
             jac[:,i] = np.zeros(len(nu), dtype = np.double)
 

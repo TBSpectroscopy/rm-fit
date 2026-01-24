@@ -48,13 +48,12 @@ def msfp(control_file, option):
 
     
     specs = [np.array([], dtype = np.double), np.array([], dtype = np.double)]  # [all wavenumbers, all irradiances]
-    nu = np.array([], dtype = np.double)
     for i in range(0, len(spectral_data["spectra"]), 1):
         spec = opus.readSpectrum(spectral_data["spectra"][i]["spectrum"], spectral_data["calculation"]["range"])
         #spec = calc.calibrate_spectrum(spec[0], spec[1], spectral_data["calculation"]["x_calibration_factor"], spectral_data["spectra"][i]["baseline"])
         # Bad idea to calibrate the spectrum before fitting. The more abs(xcalibration) increases in the fit, the more experimental data is lost.
         # Calibration should be applied to the calculations during the fit, and to the experiment after.
-        nu = spec[0]
+        spectral_data["spectra"][i]["delimitations"] = [len(specs[0]), len(specs[0]) + len(spec[0])]
         if len(spec[0]) < 2:
             print("ERROR: spectral region in control file is out of boundaries of experiment.\nRM-Fit is a fitting software and does not currently support calculations without a spectrum file. For these use cases we recommend HAPI or HAPI2.")
             sys.exit()
@@ -90,15 +89,15 @@ def msfp(control_file, option):
         y_resid = fit.fit_spectra(params, specs, params_id, len(spectral_fit), spectral_data, linelists, offdiags)
 
         y_calc = np.array([])
-        n_nu = int(round(len(specs[0])/len(spectral_data["spectra"])))
         spec_calib = [np.array([], dtype = np.double), np.array([], dtype = np.double)]
         for i in range(0, len(spectral_data["spectra"]), 1):
-            calib = calc.calibrate_spectrum(nu, specs[1][n_nu * i : n_nu * (i + 1)], spectral_data["calculation"]["x_calibration_factor"])
+            lims = spectral_data["spectra"][i]["delimitations"]
+            calib = calc.calibrate_spectrum(specs[0][lims[0] : lims[1]], specs[1][lims[0] : lims[1]], spectral_data["calculation"]["x_calibration_factor"])
             spec_calib[0] = np.concatenate((spec_calib[0], calib[0]), axis = None)
             spec_calib[1] = np.concatenate((spec_calib[1], calib[1]), axis = None)
         del specs
         for i in range(0, len(spectral_data["spectra"]), 1):
-            y_calc = np.concatenate((y_calc, calc.calc_spectrum(spectral_data, i, linelists, offdiags, spec_calib[0], apply_xcal = False)), axis = None)
+            y_calc = np.concatenate((y_calc, calc.calc_spectrum(spectral_data, i, linelists, offdiags, spec_calib[0][spectral_data["spectra"][i]["delimitations"][0] : spectral_data["spectra"][i]["delimitations"][1]], apply_xcal = False)), axis = None)
 
         y_resid = spec_calib[1] - y_calc
 
@@ -112,10 +111,10 @@ def msfp(control_file, option):
 
     elif option == "-c":
         y_calc = np.array([])
-        n_nu = int(round(len(specs[0])/len(spectral_data["spectra"])))
         spec_calib = [np.array([], dtype = np.double), np.array([], dtype = np.double)]
         for i in range(0, len(spectral_data["spectra"]), 1):
-            calib = calc.calibrate_spectrum(nu, specs[1][n_nu * i : n_nu * (i + 1)], spectral_data["calculation"]["x_calibration_factor"])
+            lims = spectral_data["spectra"][i]["delimitations"]
+            calib = calc.calibrate_spectrum(specs[0][lims[0] : lims[1]], specs[1][lims[0] : lims[1]], spectral_data["calculation"]["x_calibration_factor"])
             spec_calib[0] = np.concatenate((spec_calib[0], calib[0]), axis = None)
             spec_calib[1] = np.concatenate((spec_calib[1], calib[1]), axis = None)
         del specs

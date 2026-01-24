@@ -47,6 +47,7 @@ def get(control_file):
             if blocpos[i]["type"] == "spectrum":
                 if control[j].startswith("file ="):
                     spec[count_spectra]["spectrum"] = get_parameter(j, control[j])
+                    spec[count_spectra]["delimitations"] = [0, 0]
                 elif control[j].startswith("form ="):
                     spec[count_spectra]["form"] = get_parameter(j, control[j])
                 elif control[j].startswith("baseline ="):
@@ -145,6 +146,17 @@ def get(control_file):
         if i["off_diagonal_in"] != "" and i["off_diagonal_out"] == "":
              print("ERROR: \"off_diagonal_out\" not set for \"{}\"".format(i["off_diagonal_in"]))
              sys.exit()
+
+    for x, i in enumerate(spec):
+        linelists_list = {j : False for j in range(1, len(linelist)+1, 1)}
+        for j in i["mole_fraction"]:
+            for key in linelists_list:
+                if key in j[1]:
+                    linelists_list[key] = True
+        for key in linelists_list:
+            if not linelists_list[key]:
+                print("WARNING: mole_fraction not set for linelist #{:d} in spectrum #{:d}".format(key, x + 1))
+
 
     return spectral_data, fitted_par
 
