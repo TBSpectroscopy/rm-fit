@@ -3,9 +3,13 @@ project(calc_g)
 
 set (CMAKE_CXX_STANDARD 23)
 
-#set(pybind11_DIR /usr/include/pybind11)
+# Find python
+find_package(Python COMPONENTS Interpreter Development)
+
+# Find pybind11
 find_package(pybind11 REQUIRED)
 
+# Find Eigen3
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN_INCLUDE_DIR})
 

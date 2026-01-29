@@ -31,6 +31,12 @@ Clang is available through Xcode Command Line Tools (`sudo xcode-select --instal
     git clone https://github.com/TBSpectroscopy/rm-fit.git
     ```
 
+2. Run `install.sh`
+
+3. Start using RM-Fit
+
+OR
+
 2. Access the source code directory
     ```
     cd rm-fit/src
@@ -46,6 +52,8 @@ Clang is available through Xcode Command Line Tools (`sudo xcode-select --instal
     make
     ```
 
+4. Start using RM-Fit
+
 Usage
 -----
 
@@ -60,6 +68,8 @@ python3 rm-fit.py [option] [input_file]
 | -h, --help | Display help text|
 | -f | Fit |
 | -c | Calculate |
+
+Note: rm-fit.py can be called from any directory.
 
 ### Dependencies
 
