@@ -97,7 +97,11 @@ def fit_spectra(params, specs, params_id, ns, spectral_data, linelists, offdiags
         stdev = math.sqrt(np.sum((results.fun)**2)/float((results.fun).size - len(params)))
         jacobian = results.jac
         hessian = np.matmul(np.transpose(jacobian), jacobian)   # A Gauss Newton approximation of the Hessian of the cost function
-        hessian_inv = np.linalg.inv(hessian)
+        try:
+            hessian_inv = np.linalg.inv(hessian)
+        except:
+            print("WARNING: Fit could not converge\nCheck your initial parameters\n")
+            hessian_inv = np.identity(len(hessian))
         main_diag = np.diagonal(hessian_inv)
         sqrt_main_diag = np.sqrt(main_diag)
         unc = stdev*sqrt_main_diag

@@ -66,6 +66,8 @@ def calc_alpha(profile, spectrum_data, linelist_data, linelist, linelist_index, 
         # There is not enough sampled points for v and cos(theta) at low pressure so we neglect line mixing for those
         if offdiag == dict():
             alpha = calc_qsdvoigt(pressure, spectrum_data["temperature"], mass, mole_fraction, linelist, vnu, lowest_value, tips_ratio)
+        else:
+            alpha = calc_sd_mat(pressure, spectrum_data["temperature"], mass, mass_p, mole_fraction, linelist, offdiag, tips_, vnu, lowest_value, method, tips_ratio)
     elif profile == "qsd_rautian":
         # There is not enough sampled points for v and cos(theta) at low pressure so we neglect line mixing for those
         if offdiag == dict() or spectrum_data["total_pressure"] < 10:
@@ -221,7 +223,9 @@ def calc_nosd_mat(pressure, temperature, mass, mole_fraction, linelist, offdiag,
     # Diagonal matrices containing the line positions and the narrowing coefficients
     nu0 = np.diag([(i[0]) for i in linelist["wavenumber"]])
     n_nu0 = len(linelist["wavenumber"])
-    beta = np.diag([i[0] for i in linelist["narrowing"]]) * pressure
+    beta = np.diag([0.0 for i in linelist["wavenumber"]])
+    if "narrowing" in linelist:
+        beta = np.diag([i[0] for i in linelist["narrowing"]]) * pressure
 
     # Vector containing the relative populations of the inferior levels
     popu = np.array([linelist["statistical weight"][i] * np.exp(-c2_constant * linelist["energy"][i] / temperature) / tips for i in range(0, n_nu0, 1)])
@@ -260,7 +264,7 @@ def calc_nosd_mat(pressure, temperature, mass, mole_fraction, linelist, offdiag,
         if calc_check:
             nu0mid = (nvnu[lim0] + nvnu[lim1-1])/2
 
-            rau = rautian.calc_rautian(nvnu[lim0:lim1], nu0mid, doppler_width, 0.0, narrowing, 0.0)
+            rau = rautian.calc_rautian(nvnu[lim0:lim1], nu0mid, doppler_width, 0.0, narrowing, 0.0, 0.0)
             if len(rau) % 2 == 0:
                 rau = np.delete(rau, len(rau)-1)
 
@@ -297,7 +301,9 @@ def calc_sd_mat(pressure, temperature, mass, mass_p, mole_fraction, linelist, of
     # Diagonal matrices containing the line positions and the narrowing coefficients
     nu0 = np.diag([(i[0]) for i in linelist["wavenumber"]])
     n_nu0 = len(linelist["wavenumber"])
-    beta = np.diag([i[0] for i in linelist["narrowing"]]) * pressure
+    beta = np.diag([0.0 for i in linelist["wavenumber"]])
+    if "narrowing" in linelist:
+        beta = np.diag([i[0] for i in linelist["narrowing"]]) * pressure
 
     # Vector and matrix containing the relative populations of the inferior levels
     popu = np.array([linelist["statistical weight"][i] * np.exp(-c2_constant * linelist["energy"][i] / temperature) / tips for i in range(0, n_nu0, 1)])

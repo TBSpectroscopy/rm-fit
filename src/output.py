@@ -91,10 +91,11 @@ def write_offdiags(offdiag_inputs, offdiag_outputs, offdiags, offdiag_format):
             with open(offdiag_inputs[i]) as f, open("{}.temp".format(offdiag_outputs[i]), "w") as nf:
                 count = 0
                 for line in f:
-                    if "{} {}".format(line[offdiag_format[i]["name_1"][0] : offdiag_format[i]["name_1"][1]], line[offdiag_format[i]["name_2"][0] : offdiag_format[i]["name_2"][1]]) in offdiag["names"]:
-                        if offdiag["line-mixing"][count][1]:
-                            line = set_line_par(line, offdiag_format[i]["line-mixing"], offdiag["line-mixing"][count])
-                        count += 1
+                    if "names" in offdiag:
+                        if "{} {}".format(line[offdiag_format[i]["name_1"][0] : offdiag_format[i]["name_1"][1]], line[offdiag_format[i]["name_2"][0] : offdiag_format[i]["name_2"][1]]) in offdiag["names"]:
+                            if offdiag["line-mixing"][count][1]:
+                                line = set_line_par(line, offdiag_format[i]["line-mixing"], offdiag["line-mixing"][count])
+                            count += 1
                     nf.write(line)
 
             os.replace("{}.temp".format(offdiag_outputs[i]), offdiag_outputs[i])
