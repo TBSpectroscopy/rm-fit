@@ -105,7 +105,7 @@ def calc_voigt(pressure, temperature, mass, mole_fraction, linelist, vnu, lowest
         lowest_value_ = lowest_value / intensity # Absorption cross section divided by the intensity to get the lowest value needed for the profile
 
         doppler_width = doppler.hwhm(linelist["wavenumber"][i][0], temperature, mass)
-        lorentz_width = ((linelist["self-broadening"][i][0] * mole_fraction) + (linelist["foreign-broadening"][i][0] * (1 - mole_fraction))) * pressure
+        lorentz_width = ((linelist["self-broadening"][i][0] * ((296.0/temperature)**linelist["self-broadening_temp"][i][0]) * mole_fraction) + (linelist["foreign-broadening"][i][0] * ((296.0/temperature)**linelist["foreign-broadening_temp"][i][0]) * (1 - mole_fraction))) * pressure
         shift = ((linelist["self-shift"][i][0] * mole_fraction) + (linelist["foreign-shift"][i][0] * (1 - mole_fraction))) * pressure
         
         lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu, dnu)
@@ -131,7 +131,7 @@ def calc_rautian(pressure, temperature, mass, mole_fraction, linelist, vnu, lowe
         lowest_value_ = lowest_value / intensity # Absorption cross section divided by the intensity to get the lowest value needed for the profile
 
         doppler_width = doppler.hwhm(linelist["wavenumber"][i][0], temperature, mass)
-        lorentz_width = ((linelist["self-broadening"][i][0] * mole_fraction) + (linelist["foreign-broadening"][i][0] * (1 - mole_fraction))) * pressure
+        lorentz_width = ((linelist["self-broadening"][i][0] * ((296.0/temperature)**linelist["self-broadening_temp"][i][0]) * mole_fraction) + (linelist["foreign-broadening"][i][0] * ((296.0/temperature)**linelist["foreign-broadening_temp"][i][0]) * (1 - mole_fraction))) * pressure
         narrowing = linelist["narrowing"][i][0] * pressure
         shift = ((linelist["self-shift"][i][0] * mole_fraction) + (linelist["foreign-shift"][i][0] * (1 - mole_fraction))) * pressure
         
@@ -158,7 +158,7 @@ def calc_qsdvoigt(pressure, temperature, mass, mole_fraction, linelist, vnu, low
         lowest_value_ = lowest_value / intensity # Absorption cross section divided by the intensity to get the lowest value needed for the profile
 
         doppler_width = doppler.hwhm(linelist["wavenumber"][i][0], temperature, mass)
-        lorentz_width = ((linelist["self-broadening"][i][0] * mole_fraction) + (linelist["foreign-broadening"][i][0] * (1 - mole_fraction))) * pressure
+        lorentz_width = ((linelist["self-broadening"][i][0] * ((296.0/temperature)**linelist["self-broadening_temp"][i][0]) * mole_fraction) + (linelist["foreign-broadening"][i][0] * ((296.0/temperature)**linelist["foreign-broadening_temp"][i][0]) * (1 - mole_fraction))) * pressure
         sd_width = linelist["SD-broadening"][i][0] * lorentz_width
         shift = ((linelist["self-shift"][i][0] * mole_fraction) + (linelist["foreign-shift"][i][0] * (1 - mole_fraction))) * pressure
         sd_shift = linelist["SD-shift"][i][0] * shift
@@ -189,7 +189,7 @@ def calc_qsdrautian(pressure, temperature, mass, mole_fraction, linelist, vnu, l
         lowest_value_ = lowest_value / intensity # Absorption cross section divided by the intensity to get the lowest value needed for the profile
 
         doppler_width = doppler.hwhm(linelist["wavenumber"][i][0], temperature, mass)
-        lorentz_width = ((linelist["self-broadening"][i][0] * mole_fraction) + (linelist["foreign-broadening"][i][0] * (1 - mole_fraction))) * pressure
+        lorentz_width = ((linelist["self-broadening"][i][0] * ((296.0/temperature)**linelist["self-broadening_temp"][i][0]) * mole_fraction) + (linelist["foreign-broadening"][i][0] * ((296.0/temperature)**linelist["foreign-broadening_temp"][i][0]) * (1 - mole_fraction))) * pressure
         narrowing = linelist["narrowing"][i][0] * pressure
         sd_width = linelist["SD-broadening"][i][0] * lorentz_width
         shift = ((linelist["self-shift"][i][0] * mole_fraction) + (linelist["foreign-shift"][i][0] * (1 - mole_fraction))) * pressure
@@ -210,7 +210,7 @@ def calc_qsdrautian(pressure, temperature, mass, mole_fraction, linelist, vnu, l
 
 def calc_nosd_mat(pressure, temperature, mass, mole_fraction, linelist, offdiag, tips, vnu, lowest_value, profile, tips_ratio):
 
-    lorentz_width = ((linelist["self-broadening"][0][0] * mole_fraction) + (linelist["foreign-broadening"][0][0] * (1 - mole_fraction))) * pressure
+    lorentz_width = ((linelist["self-broadening"][0][0] * ((296.0/temperature)**linelist["self-broadening_temp"][0][0]) * mole_fraction) + (linelist["foreign-broadening"][0][0] * ((296.0/temperature)**linelist["foreign-broadening_temp"][0][0]) * (1 - mole_fraction))) * pressure
     dnu = ((vnu[-1] - vnu[0]) / (len(vnu) - 1))
     interp = 1
     #if dnu > lorentz_width / 10 : # if dnu is bigger than 0.1 lorentzian width
@@ -253,7 +253,7 @@ def calc_nosd_mat(pressure, temperature, mass, mole_fraction, linelist, offdiag,
         lowest_value_ = lowest_value / linelist["intensity"][i][0] # Absorption cross section divided by the intensity to get the lowest value needed for the profile
 
         doppler_width = doppler.hwhm(linelist["wavenumber"][i][0], temperature, mass)
-        lorentz_width = ((linelist["self-broadening"][i][0] * mole_fraction) + (linelist["foreign-broadening"][i][0] * (1 - mole_fraction))) * pressure
+        lorentz_width = ((linelist["self-broadening"][i][0] * ((296.0/temperature)**linelist["self-broadening_temp"][i][0]) * mole_fraction) + (linelist["foreign-broadening"][i][0] * ((296.0/temperature)**linelist["foreign-broadening_temp"][i][0]) * (1 - mole_fraction))) * pressure
         shift = ((linelist["self-shift"][i][0] * mole_fraction) + (linelist["foreign-shift"][i][0] * (1 - mole_fraction))) * pressure
         if profile == "rautian":
             narrowing = linelist["narrowing"][i][0] * pressure
@@ -327,7 +327,7 @@ def calc_sd_mat(pressure, temperature, mass, mass_p, mole_fraction, linelist, of
         lowest_value_ = lowest_value / linelist["intensity"][i][0] # Absorption cross section divided by the intensity to get the lowest value needed for the profile
 
         doppler_width = doppler.hwhm(linelist["wavenumber"][i][0], temperature, mass)
-        lorentz_width = ((linelist["self-broadening"][i][0] * mole_fraction) + (linelist["foreign-broadening"][i][0] * (1 - mole_fraction))) * pressure
+        lorentz_width = ((linelist["self-broadening"][i][0] * ((296.0/temperature)**linelist["self-broadening_temp"][i][0]) * mole_fraction) + (linelist["foreign-broadening"][i][0] * ((296.0/temperature)**linelist["foreign-broadening_temp"][i][0]) * (1 - mole_fraction))) * pressure
         shift = ((linelist["self-shift"][i][0] * mole_fraction) + (linelist["foreign-shift"][i][0] * (1 - mole_fraction))) * pressure
 
         lims[i][0], lims[i][1], calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu, dnu)

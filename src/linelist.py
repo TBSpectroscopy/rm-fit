@@ -16,7 +16,7 @@ import os
 
 def set_default_par(par, profile):
     prof_comb = {"voigt": ["lorentz"], "rautian": ["lorentz", "narrowing"], "qsd_voigt": ["lorentz", "speed-dependence"], "qsd_rautian": ["lorentz", "speed-dependence", "narrowing"]}
-    par_prof = {"essentials": ["wavenumber", "intensity"], "general": ["name", "statistical weight", "energy"], "lorentz": ["self-broadening", "foreign-broadening", "self-shift", "foreign-shift", "line-mixing"], "narrowing": ["narrowing"], "speed-dependence": ["SD-broadening", "SD-shift"]}
+    par_prof = {"essentials": ["wavenumber", "intensity"], "general": ["name", "statistical weight", "energy"], "lorentz": ["self-broadening", "foreign-broadening", "self-shift", "foreign-shift", "line-mixing", "self-broadening_temp", "foreign-broadening_temp"], "narrowing": ["narrowing"], "speed-dependence": ["SD-broadening", "SD-shift"]}
 
     for i in par_prof["essentials"]:
         if not i in par:
@@ -124,7 +124,8 @@ def get_format(form, name_width = None):   # Convert "Format" field string to ab
                 del parpos["{}_unc".format(key)]
                 del parpos["{}_fit".format(key)]
             except:
-                print("ERROR: No uncertainty column was found for fit parameter {}".format(key))
+                print("ERROR: No uncertainty column was found for fit parameter {}\n".format(key))
+                sys.exit()
         elif "{}_unc".format(key) in parpos and not "{}_fit".format(key) in parpos:
             parpos[key] += parpos["{}_unc".format(key)]
             del parpos["{}_unc".format(key)]
@@ -141,7 +142,7 @@ def read_linelist(par, line, parpos, x):
 
     for key in par.keys():
         if key != "line_position":
-            if key in ["wavenumber", "intensity", "self-broadening", "foreign-broadening", "self-shift", "foreign-shift", "line-mixing", "narrowing", "SD-broadening", "SD-shift", "fbroad_temp"]:
+            if key in ["wavenumber", "intensity", "self-broadening", "foreign-broadening", "self-shift", "foreign-shift", "line-mixing", "narrowing", "SD-broadening", "SD-shift", "foreign-broadening_temp", "self-broadening_temp"]:
                 if len(parpos[key]) == 3:
                     par[key].append((float(line[parpos[key][0] : parpos[key][1]]), False, 0.0))
                 elif len(parpos[key]) == 6:
