@@ -55,7 +55,7 @@ def get(control_file):
                     truth = [parse_fit(i)[1] for i in (get_parameter(j, control[j]).split())]
                     for x, k in enumerate(truth):
                         if k:
-                            fitted_par.append((count_spectra, "baseline {:d}".format(x), spec[count_spectra]["baseline"][x]))
+                            fitted_par.append([count_spectra, "baseline {:d}".format(x), spec[count_spectra]["baseline"][x]])
                 elif control[j].startswith("lowest_value ="):
                     spec[count_spectra]["lowest_value"] = float(get_parameter(j, control[j]))
                 elif control[j].startswith("mole_fraction ="):
@@ -63,19 +63,25 @@ def get(control_file):
                     truth = [parse_fit(k.split(":")[0])[1] for k in (get_parameter(j, control[j]).split("/"))]
                     for x, k in enumerate(truth):
                         if k:
-                            fitted_par.append((count_spectra, "mole_fraction", x, spec[count_spectra]["mole_fraction"][x][0]))
+                            fitted_par.append([count_spectra, "mole_fraction", x, spec[count_spectra]["mole_fraction"][x][0]])
+                elif control[j].startswith("intensity_factor ="):
+                    spec[count_spectra]["intensity_factor"] = [(parse_fit(k.split(":")[0])[0],) + ([int(l) for l in (k.split(":")[1]).split()],) for k in (get_parameter(j, control[j]).split("/"))]
+                    truth = [parse_fit(k.split(":")[0])[1] for k in (get_parameter(j, control[j]).split("/"))]
+                    for x, k in enumerate(truth):
+                        if k:
+                            fitted_par.append([count_spectra, "intensity_factor", x, spec[count_spectra]["intensity_factor"][x][0]])
                 elif control[j].startswith("path_length ="):
                     spec[count_spectra]["path_length"], truth = parse_fit(get_parameter(j, control[j]))
                     if truth:
-                        fitted_par.append((count_spectra, "path_length", spec[count_spectra]["path_length"]))
+                        fitted_par.append([count_spectra, "path_length", spec[count_spectra]["path_length"]])
                 elif control[j].startswith("total_pressure ="):
                     spec[count_spectra]["total_pressure"], truth = parse_fit(get_parameter(j, control[j]))
                     if truth:
-                        fitted_par.append((count_spectra, "total_pressure", spec[count_spectra]["total_pressure"]))
+                        fitted_par.append([count_spectra, "total_pressure", spec[count_spectra]["total_pressure"]])
                 elif control[j].startswith("temperature ="):
                     spec[count_spectra]["temperature"], truth = parse_fit(get_parameter(j, control[j]))
                     if truth:
-                        fitted_par.append((count_spectra, "temperature", spec[count_spectra]["temperature"]))
+                        fitted_par.append([count_spectra, "temperature", spec[count_spectra]["temperature"]])
                 elif control[j].startswith("include_ils ="):
                     spec[count_spectra]["include_ils"] = get_parameter(j, control[j]) == "yes"
                 elif control[j].startswith("ils_type ="):
@@ -131,6 +137,8 @@ def get(control_file):
                     fit["max_iter"] = get_parameter(j, control[j])
 
     # Remove spectra not considered spectra
+    spec_list = [i for i in range(0, len(spec), 1) if i in calculation["spectra_considered"]]
+    spec_dict = {spec_list[i] : i for i in range(0, len(spec_list), 1)}
     if calculation["spectra_considered"] != "all":
         for i in range(len(spec)-1, -1, -1):
             if not i in calculation["spectra_considered"]:
@@ -138,6 +146,11 @@ def get(control_file):
                 for j in range(len(fitted_par)-1, -1, -1):
                     if fitted_par[j][0] == i:
                         del fitted_par[j]
+
+    for i in range(0, len(fitted_par), 1):
+        if type(fitted_par[i][0]) is int:
+            fitted_par[i][0] = spec_dict[fitted_par[i][0]]
+        fitted_par[i] = tuple(fitted_par[i])
 
 
     spectral_data = {"spectra": spec, "linelists": linelist, "calculation": calculation, "fit": fit}
@@ -156,6 +169,10 @@ def get(control_file):
         for key in linelists_list:
             if not linelists_list[key]:
                 print("WARNING: mole_fraction not set for linelist #{:d} in spectrum #{:d}".format(key, x + 1))
+        for j in i["intensity_factor"]:
+            for key in linelists_list:
+                if key in j[1]:
+                    linelists_list[key] = True
 
 
     return spectral_data, fitted_par

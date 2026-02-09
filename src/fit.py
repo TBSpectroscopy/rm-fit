@@ -173,7 +173,7 @@ def update_parameters(params, *args, unc = []):
             spectral_data["spectra"][params_id[i][0]][params_id[i][1].split()[0]][int(params_id[i][1].split()[1])] = params[i]
         elif params_id[i][1] == "x_calibration_factor":
             spectral_data["calculation"][params_id[i][1]] = params[i]
-        elif params_id[i][1].split()[0] == "mole_fraction":
+        elif params_id[i][1].split()[0] == "mole_fraction" or params_id[i][1].split()[0] == "intensity_factor":
             spectral_data["spectra"][params_id[i][0]][params_id[i][1].split()[0]][params_id[i][2]] = (params[i], spectral_data["spectra"][params_id[i][0]][params_id[i][1].split()[0]][params_id[i][2]][1])
         else:
             spectral_data["spectra"][params_id[i][0]][params_id[i][1]] = params[i]
