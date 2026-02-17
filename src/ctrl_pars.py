@@ -43,7 +43,7 @@ def get(control_file):
             count_spectra += 1
         elif blocpos[i]["type"] == "linelist":
             count_linelists += 1
-        for j in range(blocpos[i]["pos"] + 1, blocpos[i+1]["pos"], 1):
+        for j in range(blocpos[i]["pos"] + 1, blocpos[i+1]["pos"] + 1, 1):
             if blocpos[i]["type"] == "spectrum":
                 if control[j].startswith("file ="):
                     spec[count_spectra]["spectrum"] = get_parameter(j, control[j])

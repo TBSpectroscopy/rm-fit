@@ -91,7 +91,7 @@ def fit_spectra(params, specs, params_id, ns, spectral_data, linelists, offdiags
         f.write("RM-Fit\n"\
                 "Run time: {}\n\n".format(datetime.datetime.now().isoformat(sep = " ", timespec="minutes")))
 
-        results = least_squares(leastsq_fun, params, jac = calc_jac, bounds = bounds, args = (specs, params_id, ns, spectral_data, linelists, offdiags), method = "trf", verbose = 2, max_nfev = 12)
+        results = least_squares(leastsq_fun, params, jac = calc_jac, bounds = bounds, args = (specs, params_id, ns, spectral_data, linelists, offdiags), method = "trf", verbose = 2, max_nfev = 12, gtol = None, ftol = None)
 
         # Estimate the uncertainty with the rescaled inverse Hessian
         stdev = math.sqrt(np.sum((results.fun)**2)/float((results.fun).size - len(params)))
@@ -204,7 +204,7 @@ def get_bounds(params_id):
                 bound_min.append(0.0)
                 bound_max.append(np.inf)
         else:
-            if params_id[i][3] == "foreign-shift" or params_id[i][3] == "self-shift":
+            if params_id[i][3] in ["foreign-shift", "self-shift", "line-mixing_fo"]:
                 bound_min.append(-np.inf)
                 bound_max.append(np.inf)
             else:

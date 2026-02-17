@@ -119,7 +119,7 @@ def calc_voigt(pressure, temperature, mass, mole_fraction, linelist, vnu, lowest
         lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu, dnu)
         if calc_check:
 
-            voigt = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0], doppler_width, lorentz_width, 0.0, shift, linelist["line-mixing"][i][0] * pressure) * intensity
+            voigt = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0], doppler_width, lorentz_width, 0.0, shift, linelist["line-mixing_fo"][i][0] * pressure) * intensity
 
             sigma[lim0:lim1] += voigt
 
@@ -146,7 +146,7 @@ def calc_rautian(pressure, temperature, mass, mole_fraction, linelist, vnu, lowe
         lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu, dnu)
         if calc_check:
 
-            rau = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0], doppler_width, lorentz_width, narrowing, shift, linelist["line-mixing"][i][0] * pressure) * intensity
+            rau = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0], doppler_width, lorentz_width, narrowing, shift, linelist["line-mixing_fo"][i][0] * pressure) * intensity
 
             sigma[lim0:lim1] += rau
 
@@ -177,7 +177,7 @@ def calc_qsdvoigt(pressure, temperature, mass, mole_fraction, linelist, vnu, low
 
         if calc_check:
             line_ri = [qSDV.qsdv(linelist["wavenumber"][i][0], doppler_width, lorentz_width, sd_width, shift, sd_shift, vnu[j], LS_qSDV_R, LS_qSDV_I) for j in range(lim0, lim1, 1)]
-            sigma[lim0:lim1] += np.array([(j[0] - (pressure * linelist["line-mixing"][i][0] * j[1])) * intensity for j in line_ri])
+            sigma[lim0:lim1] += np.array([(j[0] - (pressure * linelist["line-mixing_fo"][i][0] * j[1])) * intensity for j in line_ri])
 
     return sigma
 
@@ -209,7 +209,7 @@ def calc_qsdrautian(pressure, temperature, mass, mole_fraction, linelist, vnu, l
 
         if calc_check:
             line_ri = [qSDHC.qsdhc(linelist["wavenumber"][i][0], doppler_width, lorentz_width, sd_width, shift, sd_shift, narrowing, vnu[j], LS_qSDV_R, LS_qSDV_I) for j in range(lim0, lim1, 1)]
-            sigma[lim0:lim1] += np.array([(j[0] - (pressure * linelist["line-mixing"][i][0] * j[1])) * intensity for j in line_ri])
+            sigma[lim0:lim1] += np.array([(j[0] - (pressure * linelist["line-mixing_fo"][i][0] * j[1])) * intensity for j in line_ri])
 
     return sigma
 
@@ -340,8 +340,8 @@ def calc_sd_mat(pressure, temperature, mass, mass_p, mole_fraction, linelist, of
         if lorentz_width < 0.0008:
             print("Lorentz width too small -> switching to first order")
             Y = get_Y(W, X, nu0, pressure)
-            for j in range(0, len(linelist["line-mixing"]), 1):
-                linelist["line-mixing"][j] = (Y[j], 0.0, False)
+            for j in range(0, len(linelist["line-mixing_fo"]), 1):
+                linelist["line-mixing_fo"][j] = (Y[j], 0.0, False)
             if "narrowing" in linelist:
                 return calc_qsdrautian(pressure, temperature, mass, mole_fraction, linelist, vnu, lowest_value, tips_ratio, intensity_factor)
             return calc_qsdvoigt(pressure, temperature, mass, mole_fraction, linelist, vnu, lowest_value, tips_ratio, intensity_factor)

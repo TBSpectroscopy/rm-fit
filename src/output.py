@@ -37,23 +37,25 @@ def write_linelists(linelist_inputs, linelist_outputs, linelists, spec_range, li
     for i in range(0, len(linelist_inputs), 1):
 
         # Linelist is separated in blocks and needs to be flattened back
+        if len(linelists[i]) == 0:
+            continue
+
         linelist = dict()
-        if len(linelists[i]) != 0:
-            for key, item in linelists[i][0].items():
-                linelist[key] = []
+        for key, item in linelists[i][0].items():
+            linelist[key] = []
 
-            for j in range(0, len(linelists[i]), 1):
-                for key, item in linelists[i][j].items():
-                    linelist[key] += item
+        for j in range(0, len(linelists[i]), 1):
+            for key, item in linelists[i][j].items():
+                linelist[key] += item
 
-            order = np.argsort(np.array(linelist["line_position"]), kind = "stable")
+        order = np.argsort(np.array(linelist["line_position"]), kind = "stable")
 
-            for key, item in linelist.items():
-                linelist[key] = np.array(item)[order]
-                if linelist[key].ndim == 2:     # Numpy changes tuple into array and convert booleans to numbers
-                    linelist[key] = linelist[key].tolist()
-                    for j in linelist[key]:
-                        j[1] = int(j[1])    # Make sure that converted booleans are integers
+        for key, item in linelist.items():
+            linelist[key] = np.array(item)[order]
+            if linelist[key].ndim == 2:     # Numpy changes tuple into array and convert booleans to numbers
+                linelist[key] = linelist[key].tolist()
+                for j in linelist[key]:
+                    j[1] = int(j[1])    # Make sure that converted booleans are integers
 
     
         with open(linelist_inputs[i], "r") as f, open("{}.temp".format(linelist_outputs[i]), "w") as nf:

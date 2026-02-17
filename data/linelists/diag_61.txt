@@ -2,8 +2,8 @@ $HEADER
  Mass.....................: 16.031 g/mol
  Temperature..............: 296.00 K
  Mass Perturbing..........: 44.010 g/mol 
- Format...................: "{fit:1} {name:11} {wavenumber:12f} {wavenumber_unc:7E}{wavenumber_fit:1}{intensity:11E} {intensity_unc:7E}{intensity_fit:1}{foreign-broadening:10E} {foreign-broadening_unc:7E}{foreign-broadening_fit:1}{foreign-broadening_temp:10E} {foreign-broadening_temp_unc:7E}{foreign-broadening_temp_fit:1}{self-broadening:10E} {self-broadening_unc:7E}{self-broadening_fit:1}{self-broadening_temp:10E} {self-broadening_temp_unc:7E}{self-broadening_temp_fit:1}{SD-broadening:10E} {SD-broadening_unc:7E}{SD-broadening_fit:1}{narrowing:10E} {narrowing_unc:7E}{narrowing_fit:1}{foreign-shift:10E} {foreign-shift_unc:7E}{foreign-shift_fit:1}{self-shift:10E} {self-shift_unc:7E}{self-shift_fit:1}{SD-shift:10E} {SD-shift_unc:7E}{SD-shift_fit:1}{line-mixing:10E} {line-mixing_unc:7E}{line-mixing_fit:1}{statistical weight:9f}{energy:13f}"
- % {line-mixing} refers to first-order approximation parameter. Ignored if line name present in offdiag
+ Format...................: "{fit:1} {name:11} {wavenumber:12f} {wavenumber_unc:7E}{wavenumber_fit:1}{intensity:11E} {intensity_unc:7E}{intensity_fit:1}{foreign-broadening:10E} {foreign-broadening_unc:7E}{foreign-broadening_fit:1}{foreign-broadening_temp:10E} {foreign-broadening_temp_unc:7E}{foreign-broadening_temp_fit:1}{self-broadening:10E} {self-broadening_unc:7E}{self-broadening_fit:1}{self-broadening_temp:10E} {self-broadening_temp_unc:7E}{self-broadening_temp_fit:1}{SD-broadening:10E} {SD-broadening_unc:7E}{SD-broadening_fit:1}{narrowing:10E} {narrowing_unc:7E}{narrowing_fit:1}{foreign-shift:10E} {foreign-shift_unc:7E}{foreign-shift_fit:1}{self-shift:10E} {self-shift_unc:7E}{self-shift_fit:1}{SD-shift:10E} {SD-shift_unc:7E}{SD-shift_fit:1}{line-mixing_fo:10E} {line-mixing_fo_unc:7E}{line-mixing_fo_fit:1}{statistical weight:9f}{energy:13f}"
+ % {line-mixing_fo} refers to first-order approximation parameter. Ignored if line name present in offdiag
 
 
 $LINE_PARAMETERS
