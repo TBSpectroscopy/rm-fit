@@ -58,18 +58,35 @@ def write_linelists(linelist_inputs, linelist_outputs, linelists, spec_range, li
                     j[1] = int(j[1])    # Make sure that converted booleans are integers
 
     
-        with open(linelist_inputs[i], "r") as f, open("{}.temp".format(linelist_outputs[i]), "w") as nf:
+        # Create output file if non existent
+        f_out = linelist_outputs[i] 
+        if linelist_outputs[i] == linelist_inputs[i]:
+            f_out = "{}.log".format(linelist_outputs[i])
+        if not os.path.exists(f_out):
+            f2 = open(f_out, "w")
+            f2.close()
+
+        # Read input and output to write lines
+        with open(linelist_inputs[i], "r") as f, open(f_out) as f2, open("{}.temp".format(linelist_outputs[i]), "w") as nf:
             count = 0
             for x, line in enumerate(f):
-                if linelist["line_position"][0] <= x <= linelist["line_position"][-1]:
+                line2 = f2.readline()
+                if linelist["line_position"][0] <= x <= linelist["line_position"][-1]:  # Uses input list and fit to write output
+                    line2 = line
                     for key in linelist_formats[i].keys():
                         if len(linelist_formats[i][key]) == 9 and linelist[key][count][1]:
-                            line = set_line_par(line, linelist_formats[i][key], linelist[key][count])
+                            line2 = set_line_par(line, linelist_formats[i][key], linelist[key][count])
+                            line = line2
                     count += 1
 
-                nf.write(line)
+                if len(line) == len(line2):
+                    nf.write(line2) # Write linelist_output line outside of bounds and fit input inside
+                else:
+                    nf.write(line)  # Write input line if linelist_output line format diverges too much from input
 
         os.replace("{}.temp".format(linelist_outputs[i]), linelist_outputs[i])
+        if linelist_outputs[i] == linelist_inputs[i]:
+            os.remove(f_out)
 
     return
 
@@ -77,30 +94,48 @@ def write_linelists(linelist_inputs, linelist_outputs, linelists, spec_range, li
 def write_offdiags(offdiag_inputs, offdiag_outputs, offdiags, offdiag_format):
 
     for i in range(len(offdiags)-1, -1, -1):
-        if len(offdiag_format[i]) != 0:
+        if len(offdiag_format[i]) == 0:
+            continue
 
-            # Offdiag is separated in blocks and needs to be flattened back
-            offdiag = dict()
-            if len(offdiags[i]) != 0:
-                for key, item in offdiags[i][0].items():
-                    offdiag[key] = []
+        # Offdiag is separated in blocks and needs to be flattened back
+        offdiag = dict()
+        if len(offdiags[i]) != 0:
+            for key, item in offdiags[i][0].items():
+                offdiag[key] = []
 
-                for j in range(0, len(offdiags[i]), 1):
-                    for key, item in offdiags[i][j].items():
-                        offdiag[key] += item
+            for j in range(0, len(offdiags[i]), 1):
+                for key, item in offdiags[i][j].items():
+                    offdiag[key] += item
 
+    
+        # Create output file if non existent
+        f_out = offdiag_outputs[i] 
+        if offdiag_outputs[i] == offdiag_inputs[i]:
+            f_out = "{}.log".format(offdiag_outputs[i])
+        if not os.path.exists(f_out):
+            f2 = open(f_out, "w")
+            f2.close()
 
-            with open(offdiag_inputs[i]) as f, open("{}.temp".format(offdiag_outputs[i]), "w") as nf:
-                count = 0
-                for line in f:
-                    if "names" in offdiag:
-                        if "{} {}".format(line[offdiag_format[i]["name_1"][0] : offdiag_format[i]["name_1"][1]], line[offdiag_format[i]["name_2"][0] : offdiag_format[i]["name_2"][1]]) in offdiag["names"]:
-                            if offdiag["line-mixing"][count][1]:
-                                line = set_line_par(line, offdiag_format[i]["line-mixing"], offdiag["line-mixing"][count])
-                            count += 1
-                    nf.write(line)
+        with open(offdiag_inputs[i]) as f, open(f_out) as f2, open("{}.temp".format(offdiag_outputs[i]), "w") as nf:
+            count = 0
+            for line in f:
+                line2 = f2.readline()
+                if "names" in offdiag:
+                    if "{} {}".format(line[offdiag_format[i]["name_1"][0] : offdiag_format[i]["name_1"][1]], line[offdiag_format[i]["name_2"][0] : offdiag_format[i]["name_2"][1]]) in offdiag["names"]:
+                        line2 = line
+                        if offdiag["line-mixing"][count][1]:
+                            line = set_line_par(line, offdiag_format[i]["line-mixing"], offdiag["line-mixing"][count])
+                            line2 = line
+                        count += 1
 
-            os.replace("{}.temp".format(offdiag_outputs[i]), offdiag_outputs[i])
+                if len(line) == len(line2):
+                    nf.write(line2) # Write linelist_output line outside of bounds and fit input inside
+                else:
+                    nf.write(line)  # Write input line if linelist_output line format diverges too much from input
+
+        os.replace("{}.temp".format(offdiag_outputs[i]), offdiag_outputs[i])
+        if offdiag_outputs[i] == offdiag_inputs[i]:
+            os.remove(f_out)
 
     return
 

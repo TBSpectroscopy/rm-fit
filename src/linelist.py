@@ -263,7 +263,7 @@ def get_fitted_parameters(linelists, offdiags):
             for key, value in j.items(): # loop over parameters
                 if not key in ["name", "statistical weight", "energy", "line_position"]:
                     for kk, k in enumerate(value): # loop over lines
-                        if k[1]:
+                        if type(k) is tuple and k[1]:
                             fitted_par.append((ii, jj, kk, key, k[0]))
 
     for ii, i in enumerate(offdiags): # loop over files
@@ -271,7 +271,7 @@ def get_fitted_parameters(linelists, offdiags):
             for key, value in j.items():
                 if key != "names":
                     for kk, k in enumerate(value):
-                        if k[1]:
+                        if type(k) is tuple and k[1]:
                             fitted_par.append((ii, jj, kk, key, k[0]))
     return fitted_par
 
