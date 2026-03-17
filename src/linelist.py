@@ -15,8 +15,8 @@ import os
 
 
 def set_default_par(par, profile):
-    prof_comb = {"voigt": ["lorentz"], "rautian": ["lorentz", "narrowing"], "qsd_voigt": ["lorentz", "speed-dependence"], "qsd_rautian": ["lorentz", "speed-dependence", "narrowing"]}
-    par_prof = {"essentials": ["wavenumber", "intensity"], "general": ["name", "statistical weight", "energy"], "lorentz": ["self-broadening", "foreign-broadening", "self-shift", "foreign-shift", "line-mixing_fo", "self-broadening_temp", "foreign-broadening_temp"], "narrowing": ["narrowing"], "speed-dependence": ["SD-broadening", "SD-shift"]}
+    prof_comb = {"voigt": ["lorentz"], "rautian": ["lorentz", "narrowing"], "qsd_voigt": ["lorentz", "speed-dependence"], "qsd_rautian": ["lorentz", "speed-dependence", "narrowing"], "qsd_nelkin-ghatak": ["lorentz", "speed-dependence", "narrowing"], "hartmann-tran": ["lorentz", "speed-dependence", "narrowing", "correlation_HT"], "modified_hartmann-tran": ["lorentz", "speed-dependence", "narrowing", "correlation"]}
+    par_prof = {"essentials": ["wavenumber", "intensity"], "general": ["name", "statistical weight", "energy"], "lorentz": ["self-broadening", "foreign-broadening", "self-shift", "foreign-shift", "line-mixing_fo", "self-broadening_temp", "foreign-broadening_temp"], "narrowing": ["narrowing"], "speed-dependence": ["SD-broadening", "SD-shift"], "correlation": ["narrowing_i"], "correlation_HT": ["correlation_HT"]}
 
     for i in par_prof["essentials"]:
         if not i in par:
@@ -142,7 +142,7 @@ def read_linelist(par, line, parpos, x):
 
     for key in par.keys():
         if key != "line_position":
-            if key in ["wavenumber", "intensity", "self-broadening", "foreign-broadening", "self-shift", "foreign-shift", "line-mixing_fo", "narrowing", "SD-broadening", "SD-shift", "foreign-broadening_temp", "self-broadening_temp"]:
+            if key in ["wavenumber", "intensity", "self-broadening", "foreign-broadening", "self-shift", "foreign-shift", "line-mixing_fo", "narrowing", "SD-broadening", "SD-shift", "foreign-broadening_temp", "self-broadening_temp", "narrowing_i", "correlation_HT"]:
                 if len(parpos[key]) == 3:
                     par[key].append((float(line[parpos[key][0] : parpos[key][1]]), False, 0.0))
                 elif len(parpos[key]) == 6:

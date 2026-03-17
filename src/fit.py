@@ -17,6 +17,7 @@ import datetime
 import sys
 import os
 import output
+import multiprocessing
 
 
 #-------------------------------------------------------------------------------------------------
@@ -204,7 +205,7 @@ def get_bounds(params_id):
                 bound_min.append(0.0)
                 bound_max.append(np.inf)
         else:
-            if params_id[i][3] in ["foreign-shift", "self-shift", "line-mixing_fo"]:
+            if params_id[i][3] in ["foreign-shift", "self-shift", "line-mixing_fo", "line-mixing", "narrowing_i"]:
                 bound_min.append(-np.inf)
                 bound_max.append(np.inf)
             else:
@@ -234,6 +235,70 @@ def recalc_spectrum(params, spec_index, *args, apply_xcal : bool = True):
 
 
 #-------------------------------------------------------------------------------------------------
+# Get jacobian column for line parameters
+def get_jac_column_specs(params, i, col, y0, lims, transmittance, *args):
+
+    # Get arguments
+    nu = args[0][0]
+    params_id = args[1]
+    spectral_data = args[3]
+
+    # Estimate dy/dx
+    dx = np.abs(0.001 * params[i])
+    params[i] += dx
+    print("{} {}".format(params_id[i], params[i]))
+    if params_id[i][1].split()[0] == "baseline":
+        x = nu[lims[params_id[i][0]][0] : lims[params_id[i][0]][1]] - ((nu[lims[params_id[i][0]][1] - 1] + nu[lims[params_id[i][0]][0]])/2)
+        if spectral_data["spectra"][params_id[i][0]]["form"] == "transmittance":
+            col[lims[params_id[i][0]][0] : lims[params_id[i][0]][1]] = transmittance[params_id[i][0]] * (x ** int(params_id[i][1].split()[1]))
+        elif spectral_data["spectra"][params_id[i][0]]["form"] == "absorption_coefficient":
+            col[lims[params_id[i][0]][0] : lims[params_id[i][0]][1]] = x ** int(params_id[i][1].split()[1])
+    elif params_id[i][0] == None:
+        if dx != 0.0:
+            for j in range(0, len(spectral_data["spectra"]), 1):
+                dy = recalc_spectrum(params, j, *args) - y0[lims[j][0] : lims[j][1]]
+                col[lims[j][0] : lims[j][1]] = dy/dx
+        else:
+            col = np.zeros(len(nu), dtype = np.double)
+    else:
+        if dx != 0.0:
+            dy = recalc_spectrum(params, params_id[i][0], *args) - y0[lims[params_id[i][0]][0] : lims[params_id[i][0]][1]]
+            col[lims[params_id[i][0]][0] : lims[params_id[i][0]][1]] = dy/dx
+        else:
+            col[lims[params_id[i][0]][0] : lims[params_id[i][0]][1]] = np.zeros(lims[params_id[i][0]][1] - lims[params_id[i][0]][0], dtype = np.double)
+
+
+    params[i] -= dx
+
+    return col
+
+
+#-------------------------------------------------------------------------------------------------
+# Get jacobian column for line parameters
+def get_jac_column_line(params, i, col, y0, lims, *args):
+    # Get arguments
+    nu = args[0][0]
+    params_id = args[1]
+    spectral_data = args[3]
+
+    dx = 0.001 * params[i]
+    if params_id[i][-1] == "wavenumber":
+        dx = 0.0001
+    params[i] += dx
+    print("{} {}".format(params_id[i], params[i]))
+    if dx != 0.0:
+        for j in range(0, len(spectral_data["spectra"]), 1):
+            dy = recalc_spectrum(params, j, *args) - y0[lims[j][0] : lims[j][1]]
+            col[lims[j][0] : lims[j][1]] = dy/dx
+    else:
+        col = np.zeros(len(nu), dtype = np.double)
+
+    params[i] -= dx
+
+    return col
+
+
+#-------------------------------------------------------------------------------------------------
 # Calculate jacobian for (ycalc - yobs) (equal to jacobian for ycalc)
 def calc_jac(params, *args):
 
@@ -244,8 +309,6 @@ def calc_jac(params, *args):
     params_id = args[1]
     ns = args[2]
     spectral_data = args[3]
-    linelists = args[4]
-    offdiags = args[5]
 
 
     # Calculate initial spectrum
@@ -262,52 +325,22 @@ def calc_jac(params, *args):
     for i in range(0, len(spectral_data["spectra"]), 1):
         if spectral_data["spectra"][i]["form"] == "transmittance":
             transmittance.append(y0[lims[i][0] : lims[i][1]] / calc.calc_baseline(spectral_data["spectra"][params_id[i][0]]["baseline"], nu[lims[i][0] : lims[i][1]]))
-        elif spectral_data["spectra"][i]["form"] == "absorption_coefficient":
-            transmittance.append(y0[lims[i][0] : lims[i][1]] - calc.calc_baseline(spectral_data["spectra"][params_id[i][0]]["baseline"], nu[lims[i][0] : lims[i][1]]))
+
+    params = [i for i in params]
 
     # Estimate dy/dx
-    params = [i for i in params]
+    pool = multiprocessing.Pool()
+
+    inputs = [(params, i, jac[:,i], y0, lims, transmittance, *args) for i in range(0, ns, 1)]
+    outputs = pool.starmap(get_jac_column_specs, inputs)
     for i in range(0, ns, 1):   # Parameters inside input file
-        dx = np.abs(0.001 * params[i])
-        params[i] += dx
-        print("{} {}".format(params_id[i], params[i]))
-        if params_id[i][1].split()[0] == "baseline":
-            x = nu[lims[params_id[i][0]][0] : lims[params_id[i][0]][1]] - ((nu[lims[params_id[i][0]][1] - 1] + nu[lims[params_id[i][0]][0]])/2)
-            if spectral_data["spectra"][params_id[i][0]]["form"] == "transmittance":
-                jac[lims[params_id[i][0]][0] : lims[params_id[i][0]][1], i] = transmittance[params_id[i][0]] * (x ** int(params_id[i][1].split()[1]))
-            elif spectral_data["spectra"][params_id[i][0]]["form"] == "absorption_coefficient":
-                jac[lims[params_id[i][0]][0] : lims[params_id[i][0]][1], i] = x ** int(params_id[i][1].split()[1])
-        elif params_id[i][0] == None:
-            if dx != 0.0:
-                for j in range(0, len(spectral_data["spectra"]), 1):
-                    dy = recalc_spectrum(params, j, *args) - y0[lims[j][0] : lims[j][1]]
-                    jac[lims[j][0] : lims[j][1], i] = dy/dx
-            else:
-                jac[:,i] = np.zeros(len(nu), dtype = np.double)
-        else:
-            if dx != 0.0:
-                dy = recalc_spectrum(params, params_id[i][0], *args) - y0[lims[params_id[i][0]][0] : lims[params_id[i][0]][1]]
-                jac[lims[params_id[i][0]][0] : lims[params_id[i][0]][1], i] = dy/dx
-            else:
-                jac[lims[params_id[i][0]][0] : lims[params_id[i][0]][1], i] = np.zeros(lims[params_id[i][0]][1] - lims[params_id[i][0]][0], dtype = np.double)
+        jac[:,i] = outputs[i]
 
-
-        params[i] -= dx
-
+    inputs = [(params, i, jac[:,i], y0, lims, *args) for i in range(ns, len(params), 1)]
+    outputs = pool.starmap(get_jac_column_line, inputs)
     for i in range(ns, len(params), 1): # Parameters inside linelists
-        dx = 0.001 * params[i]
-        if params_id[i][-1] == "wavenumber":
-            dx = 0.0001
-        params[i] += dx
-        print("{} {}".format(params_id[i], params[i]))
-        if dx != 0.0:
-            for j in range(0, len(spectral_data["spectra"]), 1):
-                dy = recalc_spectrum(params, j, *args) - y0[lims[j][0] : lims[j][1]]
-                jac[lims[j][0] : lims[j][1], i] = dy/dx
-        else:
-            jac[:,i] = np.zeros(len(nu), dtype = np.double)
+        jac[:,i] = outputs[i - ns]
 
-        params[i] -= dx
 
     return jac
 

@@ -188,8 +188,9 @@ pybind11::array_t<double> calc_abs_diag(pybind11::array_t<double> vnu, pybind11:
     return sigma;
 }
 
+
 /** Calculate the absorption cross section for given lines using matrix inversions and incorporating the coupling into the correlation matrix **/
-pybind11::array_t<double> calc_abs_corr(pybind11::array_t<double> vnu, pybind11::array_t<double> v, pybind11::array_t<double> mu, double vp, Eigen::MatrixXd nu0, Eigen::MatrixXd beta, Eigen::MatrixXd rho, Eigen::VectorXd X, Eigen::MatrixXcd C, std::vector<Eigen::MatrixXcd> W, double temperature)
+pybind11::array_t<double> calc_abs_corr(pybind11::array_t<double> vnu, pybind11::array_t<double> v, pybind11::array_t<double> mu, double vp, Eigen::MatrixXd nu0, Eigen::MatrixXcd beta, Eigen::MatrixXd rho, Eigen::VectorXd X, Eigen::MatrixXcd C, std::vector<Eigen::MatrixXcd> W, double temperature)
 {
     int n_nu = vnu.size();
     int n_nu0 = nu0.rows();
@@ -258,11 +259,93 @@ pybind11::array_t<double> calc_abs_corr(pybind11::array_t<double> vnu, pybind11:
 }
 
 
+/** Calculate the Hartmann-Tran speed-dependent absorption cross section for given lines using partial matrix diagonalization **/
+pybind11::array_t<double> calc_abs_diag_ht(pybind11::array_t<double> vnu, pybind11::array_t<double> v, pybind11::array_t<double> mu, double vp, Eigen::MatrixXd nu0, std::vector<Eigen::MatrixXcd> beta, Eigen::MatrixXd rho, Eigen::VectorXd X, std::vector<Eigen::MatrixXcd> W, double temperature)
+{
+    int n_nu = vnu.size();
+    int n_nu0 = nu0.rows();
+    int n_v = v.size();
+    int n_mu = mu.size();
+
+    pybind11::buffer_info bnu = vnu.request();
+    pybind11::buffer_info bv = v.request();
+    pybind11::buffer_info bmu = mu.request();
+
+    double *anu = (double*) bnu.ptr;
+    double *av = (double*) bv.ptr;
+    double *amu = (double*) bmu.ptr;
+
+    const double c = 29979245800;
+    const double c2_constant = 1.438776877;
+
+    std::vector<Eigen::MatrixXcd> G(n_nu);
+    std::vector<Eigen::MatrixXcd> G_(n_nu); // G with nu_opt
+    std::vector<Eigen::MatrixXcd> A(n_v);
+    std::vector<Eigen::MatrixXcd> Ainv(n_v);
+    std::vector<Eigen::VectorXcd> Z(n_v);
+    std::vector<double> vsigma(n_nu);
+    double inter_mu = (2/((double)n_mu - 1));
+    double inter_v = av[n_v - 1]/((double)n_v - 1);
+    //std::cout << "Calculating G(nu)" << std::endl;
+    //std::cout << "0%" << std::flush;
+
+    for (int j = 0; j < n_v; ++j)
+    {
+        Eigen::ComplexEigenSolver<Eigen::MatrixXcd> es;
+        es.compute(nu0 - (1i * (W[j] + beta[j])), true); // Compute eigenvalues only of (nu1 - iW -ibeta)
+        A[j] = es.eigenvectors();
+        Ainv[j] = es.eigenvectors().inverse();
+        Z[j] = es.eigenvalues();
+    }
+
+    for(int i = 0; i < n_nu; ++i)
+    {
+        Eigen::MatrixXd nu = Eigen::MatrixXd::Identity(n_nu0, n_nu0);
+        nu.diagonal() *= anu[i];
+        std::vector<Eigen::MatrixXcd> integ_mu(n_mu);
+        Eigen::MatrixXcd kv = Eigen::MatrixXcd::Identity(n_nu0, n_nu0); // Executed faster if declared here
+        std::vector<Eigen::MatrixXcd> integ_v(n_v);
+        std::vector<Eigen::MatrixXcd> integ_v_(n_v);
+        for (int j = 0; j < n_v; ++j)
+        {
+            integ_v[j].resize(n_nu0, n_nu0);
+            for (int k = 0; k < n_mu; ++k)
+            {
+                integ_mu[k] = Eigen::MatrixXcd::Zero(n_nu0, n_nu0);
+                kv.diagonal() = nu.diagonal() * av[j] * amu[k] / c;
+                integ_mu[k].diagonal().noalias() = ((1i * Z[j]) - (1i * (nu.diagonal() - kv.diagonal()))).cwiseInverse();
+                integ_mu[k] = A[j] * integ_mu[k] * Ainv[j];
+            }
+            integ_v[j].noalias() = integrate(integ_mu, inter_mu) * (2.0 / (std::sqrt(M_PI) * std::pow(vp, 3))) * std::pow(av[j], 2) * std::exp(-std::pow(av[j]/vp, 2));
+            integ_v_[j].noalias() = integ_v[j] * beta[j];
+        }
+        G[i].noalias() = integrate(integ_v, inter_v);
+        G_[i].noalias() = integrate(integ_v_, inter_v);
+        //if (i % static_cast<int>(static_cast<double>(n_nu)/10) == 0 && i != 0)
+        //{
+        //    std::cout << "\r" << std::round(static_cast<double>(i)/static_cast<double>(n_nu) * 100) << "%" << std::flush;
+        //}
+        Eigen::MatrixXcd brack;
+        brack.noalias() = Eigen::MatrixXcd::Identity(n_nu0, n_nu0) - G_[i];
+        brack = brack.inverse() * G[i] * rho;
+        Eigen::VectorXcd vec;
+        vec.noalias() = brack * X;
+        Eigen::Matrix<std::complex<double>, 1, 1> sigmac;
+        sigmac.noalias() = X.transpose() * vec;
+        vsigma[i] = sigmac(0,0).real() * anu[i] * (1.0 - std::exp(-c2_constant * anu[i] / temperature)) / M_PI;
+    }
+    //std::cout << std::endl;
+    pybind11::array sigma =  pybind11::cast(vsigma);
+    return sigma;
+}
+
+
 PYBIND11_MODULE(calc_g, handle)
 {
     handle.doc() = "C++ function to calculate G and alpha";
     handle.def("calc_abs", &calc_abs);
     handle.def("calc_abs_diag", &calc_abs_diag);
     handle.def("calc_abs_corr", &calc_abs_corr);
+    handle.def("calc_abs_diag_ht", &calc_abs_diag_ht);
 }
 
