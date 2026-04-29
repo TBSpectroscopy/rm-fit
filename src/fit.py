@@ -42,14 +42,73 @@ def group_fitted_parameters(spectral_fit, line_fit):
 
 
 #-------------------------------------------------------------------------------------------------
-def fit_spectra(params, specs, params_id, ns, spectral_data, linelists, offdiags):
+def get_rel_y(params_id : list, params : list, linelists, offdiags, method, option = "-f"):
+
+    y = [[[] for j in range(0, len(linelists[i]), 1)] for i in range(0, len(linelists), 1)]
+    for i in range(0, len(params), 1):
+        if len(params_id[i]) == 4:
+            if params_id[i][3] == "line-mixing_fo":
+                y[params_id[i][0]][params_id[i][1]].append(i)
+
+    rel_y = [[() for j in range(0, len(linelists[i]), 1)] for i in range(0, len(linelists), 1)]
+    del_y = []
+    for i in range(0, len(y), 1):
+        for j in range(0, len(y[i]), 1):
+            for k in range(0, len(y[i][j]), 1):
+                if method == "first-order" or offdiags[params_id[y[i][j][k]][0]][params_id[y[i][j][k]][1]] == {} or offdiags[params_id[y[i][j][k]][0]][params_id[y[i][j][k]][1]] == []:
+                    if k == int(len(y[i][j])/2):
+                        rel_y[i][j] = params_id[y[i][j][k]]
+                        del_y.append(y[i][j][k])
+                        if option == "-f" or option == "--fit":
+                            update_y(params_id[y[i][j][k]], rel_y, linelists) # Update the selected parameter
+                        break
+                else: # Keep deleting if the full line-mixing is used
+                    del_y.append(y[i][j][k])
+
+    print("Parameters set to enforce sum rule")
+    print(rel_y)
+    for i in range(len(del_y) - 1, -1, -1):
+        del params[del_y[i]]
+        del params_id[del_y[i]]
+
+
+    return rel_y
+
+
+#-------------------------------------------------------------------------------------------------
+def get_hessian_inv(jacobian, params_id, params, par_prob):
+    hessian = np.matmul(np.transpose(jacobian), jacobian)   # A Gauss Newton approximation of the Hessian of the cost function
+
+    try:
+        hessian_inv = np.linalg.inv(hessian)
+    except:
+        print("\nWARNING: Fit could not converge: unable to get uncertainties")
+        jac_norm = np.linalg.norm(jacobian, axis = 0)
+        recurs = False
+        for i in range(0, len(jac_norm), 1):
+            if jac_norm[i] < 1e-16: # Detection limit for the fit
+                recurs = True
+                print("{} {:e} could not converge".format(params_id[i], params[i]))
+                par_prob.append(i)
+                jacobian[:,i] += 1e-10
+        if recurs:
+            print("\nAttempting uncertainty calculation without problematic parameters")
+            hessian_inv = get_hessian_inv(jacobian, params_id, params, par_prob)
+            return hessian_inv
+        print("\nUnable to find the problem. Check your initial parameters")
+        hessian_inv = np.identity(len(hessian))
+    return hessian_inv
+
+
+#-------------------------------------------------------------------------------------------------
+def fit_spectra(params, specs, params_id, ns, spectral_data, linelists, offdiags, rel_y : list):
     # ns: number of spectrum specific parameters
 
     results_filename = "{}.txt".format(os.path.splitext(spectral_data["calculation"]["output_path"])[0])
     log_filename = "{}_log.txt".format(os.path.splitext(spectral_data["calculation"]["log_file"])[0])
     params = np.array(params, dtype = np.double)
 
-    bounds = get_bounds(params_id)
+    bounds = get_bounds(params_id, params)
 
     for i in range(0, len(params), 1):
         print("{}  {}  {} - {}".format(params_id[i], params[i], bounds[0][i], bounds[1][i]))
@@ -92,22 +151,20 @@ def fit_spectra(params, specs, params_id, ns, spectral_data, linelists, offdiags
         f.write("RM-Fit\n"\
                 "Run time: {}\n\n".format(datetime.datetime.now().isoformat(sep = " ", timespec="minutes")))
 
-        results = least_squares(leastsq_fun, params, jac = calc_jac, bounds = bounds, args = (specs, params_id, ns, spectral_data, linelists, offdiags), method = "trf", verbose = 2, max_nfev = 12, gtol = None, ftol = None)
+        results = least_squares(leastsq_fun, params, jac = calc_jac, bounds = bounds, args = (specs, params_id, ns, spectral_data, linelists, offdiags, rel_y), method = "trf", verbose = 2, max_nfev = 12, gtol = None, ftol = None, xtol = 1e-12)
 
         # Estimate the uncertainty with the rescaled inverse Hessian
         stdev = math.sqrt(np.sum((results.fun)**2)/float((results.fun).size - len(params)))
         jacobian = results.jac
-        hessian = np.matmul(np.transpose(jacobian), jacobian)   # A Gauss Newton approximation of the Hessian of the cost function
-        try:
-            hessian_inv = np.linalg.inv(hessian)
-        except:
-            print("WARNING: Fit could not converge\nCheck your initial parameters\n")
-            hessian_inv = np.identity(len(hessian))
+
+        par_prob = []
+        hessian_inv = get_hessian_inv(jacobian, params_id, results.x, par_prob)
+
         main_diag = np.diagonal(hessian_inv)
         sqrt_main_diag = np.sqrt(main_diag)
         unc = stdev*sqrt_main_diag
 
-        update_parameters(results.x, specs, params_id, ns, spectral_data, linelists, offdiags, unc = unc)
+        update_parameters(results.x, specs, params_id, ns, spectral_data, linelists, offdiags, rel_y, unc = unc)
         for i in range(0, len(results.x), 1):
             f.write("{:13.5E} +- {:7.1E}..........{}\n".format(results.x[i], unc[i], params_id[i]))
 
@@ -120,6 +177,7 @@ def fit_spectra(params, specs, params_id, ns, spectral_data, linelists, offdiags
         output.write_linelists(linelist_inputs, linelist_outputs, linelists, spectral_data["calculation"]["range"], [i["format"] for i in spectral_data["linelists"]])
         output.write_offdiags(offdiag_inputs, offdiag_outputs, offdiags, [i["format_offdiag"] for i in spectral_data["linelists"]])
 
+        hessian = np.matmul(np.transpose(jacobian), jacobian)   # A Gauss Newton approximation of the Hessian of the cost function
         with open("{}_matrices.txt".format(os.path.splitext(results_filename)[0]), "w") as f2:
             f2.write("Hessian & Covariance matrices\n\n")
             f2.write("{:7}".format(""))
@@ -164,6 +222,7 @@ def update_parameters(params, *args, unc = []):
     spectral_data = args[3]
     linelists = args[4]
     offdiags = args[5]
+    rel_y = args[6]
     if len(unc) == 0:
         unc = [0.0] * len(params)
 
@@ -183,13 +242,33 @@ def update_parameters(params, *args, unc = []):
             linelists[params_id[i][0]][params_id[i][1]][params_id[i][3]][params_id[i][2]] = (params[i] / 1E20, True, unc[i] / 1E20)
         elif params_id[i][3] != "line-mixing":
             linelists[params_id[i][0]][params_id[i][1]][params_id[i][3]][params_id[i][2]] = (params[i], True, unc[i])
+            if params_id[i][3] == "line-mixing_fo":
+                update_y(params_id[i], rel_y, linelists)
         else:
             offdiags[params_id[i][0]][params_id[i][1]][params_id[i][3]][params_id[i][2]] = (params[i], True, unc[i])
     
     return
 
+
 #-------------------------------------------------------------------------------------------------
-def get_bounds(params_id):
+def update_y(param_id, rel_y, linelists):
+    y_sum = 0.0
+    unc_sum = 0.0
+    len_sum = 0
+    rel_id = rel_y[param_id[0]][param_id[1]]
+    for i in range(0, len(linelists[param_id[0]][param_id[1]][param_id[3]]), 1):
+        if i != rel_id[2]:
+            y_sum += linelists[param_id[0]][param_id[1]]["intensity"][i][0] * linelists[param_id[0]][param_id[1]]["line-mixing_fo"][i][0]
+            if linelists[param_id[0]][param_id[1]]["line-mixing_fo"][i][2] != 0.0:
+                unc_sum += ((linelists[param_id[0]][param_id[1]]["intensity"][i][0] / linelists[rel_id[0]][rel_id[1]]["intensity"][rel_id[2]][0])  * linelists[param_id[0]][param_id[1]]["line-mixing_fo"][i][2]) ** 2 # unc_a = sqrt(Sum((S_i/S_a) unc_i)^2) / sqrt(n)
+                len_sum += 1
+
+    linelists[rel_id[0]][rel_id[1]]["line-mixing_fo"][rel_id[2]] = (-(y_sum / linelists[rel_id[0]][rel_id[1]]["intensity"][rel_id[2]][0]), True, np.sqrt(unc_sum / max(1, len_sum)))
+    return
+
+
+#-------------------------------------------------------------------------------------------------
+def get_bounds(params_id, params):
 
     bound_min = []
     bound_max = []
@@ -205,9 +284,13 @@ def get_bounds(params_id):
                 bound_min.append(0.0)
                 bound_max.append(np.inf)
         else:
-            if params_id[i][3] in ["foreign-shift", "self-shift", "line-mixing_fo", "line-mixing", "narrowing_i"]:
+            if params_id[i][3] in ["foreign-shift", "self-shift", "narrowing_i"]:
                 bound_min.append(-np.inf)
                 bound_max.append(np.inf)
+            elif params_id[i][3] in ["line-mixing", "line-mixing_fo"]:
+                lims = [0.0, params[i] * np.inf]
+                bound_min.append(min(lims))
+                bound_max.append(max(lims))
             else:
                 bound_min.append(0.0)
                 bound_max.append(np.inf)
@@ -280,6 +363,8 @@ def get_jac_column_line(params, i, col, y0, lims, *args):
     nu = args[0][0]
     params_id = args[1]
     spectral_data = args[3]
+    linelists = args[4]
+    rel_y = args[6]
 
     dx = 0.001 * params[i]
     if params_id[i][-1] == "wavenumber":
@@ -294,6 +379,8 @@ def get_jac_column_line(params, i, col, y0, lims, *args):
         col = np.zeros(len(nu), dtype = np.double)
 
     params[i] -= dx
+    if params_id[i][3] == "line-mixing_fo":
+        update_y(params_id[i], rel_y, linelists)
 
     return col
 

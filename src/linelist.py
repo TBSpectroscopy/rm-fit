@@ -173,9 +173,10 @@ def get_offdiag(offdiag_list, names):
                 if start:
                     for name in names_used:
                         if len(parpos) != 0:
-                            if name == line[parpos["name_1"][0] : parpos["name_1"][1]]:
+                            if name == line[parpos["name_1"][0] : parpos["name_1"][1]] and line[parpos["name_2"][0] : parpos["name_2"][1]] in names_used:
                                 offdiag["names"].append("{} {}".format(line[parpos["name_1"][0] : parpos["name_1"][1]], line[parpos["name_2"][0] : parpos["name_2"][1]]))
-                                offdiag["line-mixing"].append((float(line[parpos["line-mixing"][0] : parpos["line-mixing"][1]]), line[parpos["line-mixing"][6] : parpos["line-mixing"][7]] == "*", float(line[parpos["line-mixing"][3] : parpos["line-mixing"][4]])))
+                                if "line-mixing" in parpos and line[parpos["line-mixing"][0] : parpos["line-mixing"][1]] != "":
+                                    offdiag["line-mixing"].append((float(line[parpos["line-mixing"][0] : parpos["line-mixing"][1]]), line[parpos["line-mixing"][6] : parpos["line-mixing"][7]] == "*", float(line[parpos["line-mixing"][3] : parpos["line-mixing"][4]])))
                 elif "Format...................:" in line and len(names_used) != 0:
                     form = line.split("..:")[1]
                     form_st = form.find("\"")
@@ -256,7 +257,7 @@ def get_blocks(spectral_data):
     return linelists, offdiags
 
 
-def get_fitted_parameters(linelists, offdiags):
+def get_fitted_parameters(linelists, offdiags, method = "general"):
     fitted_par = []
     for ii, i in enumerate(linelists): # loop over files
         for jj, j in enumerate(i): # loop over blocks
@@ -265,6 +266,9 @@ def get_fitted_parameters(linelists, offdiags):
                     for kk, k in enumerate(value): # loop over lines
                         if type(k) is tuple and k[1]:
                             fitted_par.append((ii, jj, kk, key, k[0]))
+
+    if method == "first-order":
+        return fitted_par
 
     for ii, i in enumerate(offdiags): # loop over files
         for jj, j in enumerate(i): # loop over blocks

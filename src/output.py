@@ -20,7 +20,7 @@ def set_line_par(line : str, parpos, par):
         dot_pos = parpos[i][1].find(".")
         if dot_pos == -1:   # Get number of decimals from input line
             dot_pos = line.find(".", parpos[i - 2], parpos[i - 1])
-            e_pos = parpos[i][-1]
+            e_pos = parpos[i - 1]
             if parpos[i][-1] in ["e", "E"]:
                 e_pos = line.find(parpos[i][-1], dot_pos, parpos[i - 1])
             dec = e_pos - dot_pos - 1

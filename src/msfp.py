@@ -44,7 +44,7 @@ def msfp(control_file, option):
     
 
     linelists, offdiags = linelist.get_blocks(spectral_data) # Separate line parameters according to their interactions with each other -> [file index][block (lines mixed) index]
-    line_fit = linelist.get_fitted_parameters(linelists, offdiags)
+    line_fit = linelist.get_fitted_parameters(linelists, offdiags, method = spectral_data["calculation"]["method"]) # Get linelist and off-diagonal parameters to fit
 
     
     specs = [np.array([], dtype = np.double), np.array([], dtype = np.double)]  # [all wavenumbers, all irradiances]
@@ -63,6 +63,8 @@ def msfp(control_file, option):
 
 
     params_id, params = fit.group_fitted_parameters(spectral_fit, line_fit) # Concatenate all parameters into one array
+    rel_y = fit.get_rel_y(params_id, params, linelists, offdiags, spectral_data["calculation"]["method"], option = option)
+
 
     # Check if file is a directory
     if os.path.isdir(spectral_data["calculation"]["output_path"]):
@@ -86,10 +88,11 @@ def msfp(control_file, option):
     # Either fit ("-f") or calculate ("-c") spectra depending on command parameter
     if option == "-f":
 
-        y_resid = fit.fit_spectra(params, specs, params_id, len(spectral_fit), spectral_data, linelists, offdiags)
+        y_resid = fit.fit_spectra(params, specs, params_id, len(spectral_fit), spectral_data, linelists, offdiags, rel_y)
 
         y_calc = np.array([])
         spec_calib = [np.array([], dtype = np.double), np.array([], dtype = np.double)]
+        delim = [i["delimitations"][0] for i in spectral_data["spectra"]]
         for i in range(0, len(spectral_data["spectra"]), 1):
             lims = spectral_data["spectra"][i]["delimitations"]
             calib = calc.calibrate_spectrum(specs[0][lims[0] : lims[1]], specs[1][lims[0] : lims[1]], spectral_data["calculation"]["x_calibration_factor"])
@@ -104,14 +107,20 @@ def msfp(control_file, option):
         
         spec_filename = "{}_spectra.txt".format(os.path.splitext(spectral_data["calculation"]["output_path"])[0])
         with open(spec_filename, "w") as f:
+            count = 0
             for i in range(0, len(spec_calib[0]), 1):
-                f.write("{:18.10f}{:17.7E}{:17.7E}{:17.7E}\n".format(spec_calib[0][i], spec_calib[1][i], y_calc[i], y_resid[i]))
+                line = "{:18.10f}{:17.7E}{:17.7E}{:17.7E}".format(spec_calib[0][i], spec_calib[1][i], y_calc[i], y_resid[i])
+                if i == delim[count]:
+                    line = line + "   *"
+                    count = min(count + 1, len(delim) - 1)
+                f.write(line + "\n")
 
         return
 
     elif option == "-c":
         y_calc = np.array([])
         spec_calib = [np.array([], dtype = np.double), np.array([], dtype = np.double)]
+        delim = [i["delimitations"][0] for i in spectral_data["spectra"]]
         for i in range(0, len(spectral_data["spectra"]), 1):
             lims = spectral_data["spectra"][i]["delimitations"]
             calib = calc.calibrate_spectrum(specs[0][lims[0] : lims[1]], specs[1][lims[0] : lims[1]], spectral_data["calculation"]["x_calibration_factor"])
@@ -123,8 +132,13 @@ def msfp(control_file, option):
 
         spec_filename = "{}_spectra.txt".format(os.path.splitext(spectral_data["calculation"]["output_path"])[0])
         with open(spec_filename, "w") as f:
+            count = 0
             for i in range(0, len(spec_calib[0]), 1):
-                f.write("{:18.10f}{:17.7E}{:17.7E}{:17.7E}\n".format(spec_calib[0][i], spec_calib[1][i], y_calc[i], spec_calib[1][i] - y_calc[i]))
+                line = "{:18.10f}{:17.7E}{:17.7E}{:17.7E}".format(spec_calib[0][i], spec_calib[1][i], y_calc[i], y_resid[i])
+                if i == delim[count]:
+                    line = line + "   *"
+                    count = min(count + 1, len(delim) - 1)
+                f.write(line + "\n")
 
 
     return

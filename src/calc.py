@@ -72,17 +72,17 @@ def calc_alpha(profile, spectrum_data, linelist_data, linelist, linelist_index, 
 
     alpha = np.zeros(len(vnu), dtype = np.double)
     if profile in ["qsd_voigt", "qsd_rautian", "qsd_nelkin-ghatak", "hartmann-tran", "modified_hartmann-tran"]:
-        if offdiag == dict():
+        if offdiag == dict() or method == "first-order" or offdiag["line-mixing"] == []:
             alpha = calc_qsdprofile(profile, pressure, spectrum_data["temperature"], mass, mole_fraction, linelist, vnu, lowest_value, tips_ratio, intensity_factor)
         else:
             alpha = calc_sd_mat(profile, pressure, spectrum_data["temperature"], mass, mass_p, mole_fraction, linelist, offdiag, tips_, vnu, lowest_value, method, tips_ratio, intensity_factor)
     elif profile == "rautian":
-        if offdiag == dict():
+        if offdiag == dict() or method == "first-order" or offdiag["line-mixing"] == []:
             alpha = calc_rautian(pressure, spectrum_data["temperature"], mass, mole_fraction, linelist, vnu, lowest_value, tips_ratio, intensity_factor)
         else:
             alpha = calc_nosd_mat(pressure, spectrum_data["temperature"], mass, mole_fraction, linelist, offdiag, tips_, vnu, lowest_value, profile, tips_ratio, intensity_factor)
     elif profile == "voigt":
-        if offdiag == dict():
+        if offdiag == dict() or method == "first-order" or offdiag["line-mixing"] == []:
             alpha = calc_voigt(pressure, spectrum_data["temperature"], mass, mole_fraction, linelist, vnu, lowest_value, tips_ratio, intensity_factor)
         else:
             alpha = calc_nosd_mat(pressure, spectrum_data["temperature"], mass, mole_fraction, linelist, offdiag, tips_, vnu, lowest_value, profile, tips_ratio, intensity_factor)
