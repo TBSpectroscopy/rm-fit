@@ -1,4 +1,4 @@
-#-------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
 #
 # Thibault BERTIN
 # Atomic and Molecular Physics
@@ -7,7 +7,7 @@
 # E-mail: thibault.bertin@cfa.harvard.edu
 #
 #
-#-------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
 
 import numpy as np
 import scipy.constants as constants
@@ -20,15 +20,17 @@ import calc_g
 import qSDV
 import qSDHC
 import pCqSDHC
+import mHT
 import ctrl_pars
 import doppler
 import rautian
 import tips
+import sys
 
-#-------------------------------------------------------------------------------------------------
-# Calculate limits up to which the line is calculated in the wavenumber axis
+#---------------------------------------------------------------------------------------------------
+# Calculate limits up to which the line is calculated in the wavenumber axis -----------------------
 
-def calc_lims(lowest_value, doppler_width, lorentz_width, shift, nu0, vnu, dnu):
+def calc_lims(lowest_value, doppler_width, lorentz_width, shift, nu0, vnu):
 
     numaxd = 0
     numaxl = 0
@@ -42,11 +44,128 @@ def calc_lims(lowest_value, doppler_width, lorentz_width, shift, nu0, vnu, dnu):
         lcheck = True
 
     numax = max(numaxd, numaxl)
+    lims = np.searchsorted(vnu, [nu0 + shift - numax, nu0 + shift + numax])
 
-    return min(len(vnu) - 1, max(int((nu0 + shift - numax - vnu[0]) / dnu), 0)), max(0, min(int(math.ceil((nu0 + shift + numax - vnu[0]) / dnu)) + 1, len(vnu))), dcheck + lcheck > 0
+    return lims[0], min(lims[1] + 1, len(vnu)), dcheck + lcheck > 0
 
-#-------------------------------------------------------------------------------------------------
-# Calculate absorption cross section
+#---------------------------------------------------------------------------------------------------
+
+# Get parameters for the different profiles ========================================================
+#---------------------------------------------------------------------------------------------------
+def get_intensity(pressure, temperature, mass, mole_fraction, tips_ratio, intensity_factor, linelist, i):
+    intensity = linelist["intensity"][i][0] * intensity_factor * tips_ratio * np.exp(-1.4387769 * linelist["energy"][i] / temperature) * (1 - np.exp(-1.4387769 * linelist["wavenumber"][i][0] / temperature)) / (np.exp(-1.4387769 * linelist["energy"][i] / 296.0) * (1 - np.exp(-1.4387769 * linelist["wavenumber"][i][0] / 296.0)))
+
+    return intensity
+#---------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
+def get_narrowing(pressure, temperature, mass, mole_fraction, linelist, i):
+    narrowing = (linelist["narrowing"][i][0] * ((296.0/temperature)**linelist["narrowing_temp"][i][0])) * pressure
+
+    return narrowing
+#---------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
+def get_narrowing_i(pressure, temperature, mass, mole_fraction, linelist, i):
+    narrowing_i = (linelist["narrowing_i"][i][0] * ((296.0/temperature)**linelist["narrowing_i_temp"][i][0])) * pressure
+
+    return narrowing_i
+#---------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
+def get_line_mixing_fo(pressure, temperature, mass, mole_fraction, linelist, i):
+    fo_lm = (linelist["line-mixing_fo"][i][0] * ((296.0/temperature)**linelist["line-mixing_fo_temp"][i][0])) * pressure
+
+    return fo_lm
+#---------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
+def get_line_mixing(pressure, temperature, mass, mole_fraction, offdiag, i):
+    lm = (offdiag["line-mixing"][i][0] * ((296.0/temperature)**offdiag["line-mixing_temp"][i][0])) * pressure
+
+    return lm
+#---------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
+def get_lorentz_par(pressure, temperature, mass, mole_fraction, linelist, i):
+    lorentz_width = ((linelist["self-broadening"][i][0] * ((296.0/temperature)**linelist["self-broadening_temp"][i][0]) * mole_fraction) + (linelist["foreign-broadening"][i][0] * ((296.0/temperature)**linelist["foreign-broadening_temp"][i][0]) * (1 - mole_fraction))) * pressure
+    lorentz_shift = ((linelist["self-shift"][i][0] * ((296.0/temperature)**linelist["self-shift_temp"][i][0]) * mole_fraction) + (linelist["foreign-shift"][i][0] * ((296.0/temperature)**linelist["foreign-shift_temp"][i][0]) * (1 - mole_fraction))) * pressure
+    return lorentz_width, lorentz_shift
+#---------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
+def get_voigt_par(pressure, temperature, mass, mole_fraction, linelist, i):
+    lorentz_width, lorentz_shift = get_lorentz_par(pressure, temperature, mass, mole_fraction, linelist, i)
+    doppler_width = doppler.hwhm(linelist["wavenumber"][i][0], temperature, mass)
+
+    return lorentz_width, lorentz_shift, doppler_width
+#---------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
+def get_rautian_par(pressure, temperature, mass, mole_fraction, linelist, i):
+    lorentz_width, lorentz_shift, doppler_width = get_voigt_par(pressure, temperature, mass, mole_fraction, linelist, i)
+    narrowing = get_narrowing(pressure, temperature, mass, mole_fraction, linelist, i)
+
+    return lorentz_width, lorentz_shift, doppler_width, narrowing
+#---------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
+def get_qsd_lorentz_par(pressure, temperature, mass, mole_fraction, linelist, i):
+    n_v, u_max = 21, 4.0                      # u = v/vp where vp is the most probable speed
+    boltzmann_constant, avogadro_constant = 1.380649E-16, constants.Avogadro
+    vp = math.sqrt(2.0*boltzmann_constant * temperature / (mass/avogadro_constant))
+    u = np.linspace(0, u_max*vp, n_v, dtype = np.double) / vp
+
+    b_self = sd.sdpar(linelist["self-broadening"][i][0], linelist["self-broadening_temp"][i][0], temperature, u, mass, mass, "quadratic", dpp0 = linelist["SD-broadening"][i][0])
+    d_self = sd.sdpar(linelist["self-shift"][i][0], linelist["self-shift_temp"][i][0], temperature, u, mass, mass, "quadratic", dpp0 = linelist["SD-shift"][i][0])
+    b_other = sd.sdpar(linelist["foreign-broadening"][i][0], linelist["foreign-broadening_temp"][i][0], temperature, u, mass, mass, "quadratic", dpp0 = linelist["SD-broadening"][i][0])
+    d_other = sd.sdpar(linelist["foreign-shift"][i][0], linelist["foreign-shift_temp"][i][0], temperature, u, mass, mass, "quadratic", dpp0 = linelist["SD-shift"][i][0])
+    sd_width = ((b_self * mole_fraction) + (b_other *(1 - mole_fraction))) * pressure
+    sd_shift = ((d_self * mole_fraction) + (d_other * (1 - mole_fraction))) * pressure
+
+    return sd_width, sd_shift
+#---------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
+def get_qsd_lorentz_par_only(pressure, temperature, mass, mole_fraction, linelist, i):
+    lorentz_width, lorentz_shift = get_lorentz_par(pressure, temperature, mass, mole_fraction, linelist, i)
+
+    sd_width = linelist["SD-broadening"][i][0] * lorentz_width
+    sd_shift = linelist["SD-shift"][i][0] * lorentz_shift
+
+    return sd_width, sd_shift
+#---------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
+def get_qsd_voigt_par(pressure, temperature, mass, mole_fraction, linelist, i):
+    sd_width, sd_shift = get_qsd_lorentz_par(pressure, temperature, mass, mole_fraction, linelist, i)
+    doppler_width = doppler.hwhm(linelist["wavenumber"][i][0], temperature, mass)
+
+    return sd_width, sd_shift, doppler_width
+#---------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
+def get_qsd_rautian_par(pressure, temperature, mass, mole_fraction, linelist, i):
+    sd_width, sd_shift, doppler_width = get_qsd_rautian_par(pressure, temperature, mass, mole_fraction, linelist, i)
+    narrowing = get_narrowing(pressure, temperature, mass, mole_fraction, linelist, i)
+
+    return sd_width, sd_shift, doppler_width, narrowing
+#---------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
+def get_hartmann_tran_par(pressure, temperature, mass, mole_fraction, linelist, i):
+    sd_width, sd_shift, doppler_width = get_qsd_rautian_par(pressure, temperature, mass, mole_fraction, linelist, i)
+    narrowing = get_narrowing(pressure, temperature, mass, mole_fraction, linelist, i)
+    narrowing_i = get_narrowing(pressure, temperature, mass, mole_fraction, linelist, i)
+
+    return sd_width, sd_shift, doppler_width, narrowing, linelist["correlation_HT"][i][0]
+#---------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
+def get_mod_hartmann_tran_par(pressure, temperature, mass, mole_fraction, linelist, i):
+    sd_width, sd_shift, doppler_width = get_qsd_rautian_par(pressure, temperature, mass, mole_fraction, linelist, i)
+    narrowing = get_narrowing(pressure, temperature, mass, mole_fraction, linelist, i)
+    narrowing_i = get_narrowing_i(pressure, temperature, mass, mole_fraction, linelist, i)
+
+    return sd_width, sd_shift, doppler_width, narrowing, narrowing_i
+#---------------------------------------------------------------------------------------------------
+# Get intensity, width, shift, ... -----------------------------------------------------------------
+def get_params(pressure, temperature, mass, mole_fraction, tips_ratio, intensity_factor, linelist, i, get_profile_par : callable):
+    intensity = get_intensity(pressure, temperature, mass, mole_fraction, tips_ratio, intensity_factor, linelist, i)
+    fo_lm = get_line_mixing_fo(pressure, temperature, mass, mole_fraction, linelist, i)
+
+    return intensity, get_profile_par(pressure, temperature, mass, mole_fraction, linelist, i), fo_lm
+#---------------------------------------------------------------------------------------------------
+#===================================================================================================
+
+# Calculate absorption cross section ---------------------------------------------------------------
 
 def calc_alpha(profile, spectrum_data, linelist_data, linelist, linelist_index, vnu, offdiag = dict(), method = ""):
     mass = linelist_data["mass"]
@@ -90,9 +209,9 @@ def calc_alpha(profile, spectrum_data, linelist_data, linelist, linelist_index, 
     alpha *= constants.physical_constants["Loschmidt constant (273.15 K, 101.325 kPa)"][0] * 1E-6 * (273.15 / spectrum_data["temperature"]) * (mole_fraction * pressure)
 
     return alpha
+#---------------------------------------------------------------------------------------------------
 
-#-------------------------------------------------------------------------------------------------
-# Calculate Voigt absorption cross section using Weideman algorithm from Py4CAtS
+# Calculate Voigt absorption cross section using Weideman algorithm from Py4CAtS -------------------
 
 def calc_voigt(pressure, temperature, mass, mole_fraction, linelist, vnu, lowest_value, tips_ratio, intensity_factor):
 
@@ -101,26 +220,22 @@ def calc_voigt(pressure, temperature, mass, mole_fraction, linelist, vnu, lowest
     dnu = (vnu[-1] - vnu[0]) / (len(vnu) - 1)
     for i in range(0, len(linelist["wavenumber"]), 1):
 
-        intensity = linelist["intensity"][i][0] * intensity_factor * tips_ratio * np.exp(-1.4387769 * linelist["energy"][i] / temperature) * (1 - np.exp(-1.4387769 * linelist["wavenumber"][i][0] / temperature)) / (np.exp(-1.4387769 * linelist["energy"][i] / 296.0) * (1 - np.exp(-1.4387769 * linelist["wavenumber"][i][0] / 296.0)))
-
+        intensity, (lorentz_width, lorentz_shift, doppler_width), fo_lm = get_params(pressure, temperature, mass, mole_fraction, tips_ratio, intensity_factor, linelist, i, get_voigt_par)
 
         lowest_value_ = lowest_value / intensity # Absorption cross section divided by the intensity to get the lowest value needed for the profile
 
-        doppler_width = doppler.hwhm(linelist["wavenumber"][i][0], temperature, mass)
-        lorentz_width = ((linelist["self-broadening"][i][0] * ((296.0/temperature)**linelist["self-broadening_temp"][i][0]) * mole_fraction) + (linelist["foreign-broadening"][i][0] * ((296.0/temperature)**linelist["foreign-broadening_temp"][i][0]) * (1 - mole_fraction))) * pressure
-        shift = ((linelist["self-shift"][i][0] * mole_fraction) + (linelist["foreign-shift"][i][0] * (1 - mole_fraction))) * pressure
-        
-        lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu, dnu)
+        lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, lorentz_shift, linelist["wavenumber"][i][0], vnu)
+
         if calc_check:
 
-            voigt = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0], doppler_width, lorentz_width, 0.0, shift, linelist["line-mixing_fo"][i][0] * pressure) * intensity
+            voigt = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0], doppler_width, lorentz_width, 0.0, lorentz_shift, fo_lm) * intensity
 
             sigma[lim0:lim1] += voigt
 
     return sigma
+#---------------------------------------------------------------------------------------------------
 
-#-------------------------------------------------------------------------------------------------
-# Calculate Rautian absorption cross section using Weideman algorithm from Py4CAtS
+# Calculate Rautian absorption cross section using Weideman algorithm from Py4CAtS -----------------
 
 def calc_rautian(pressure, temperature, mass, mole_fraction, linelist, vnu, lowest_value, tips_ratio, intensity_factor):
 
@@ -128,25 +243,20 @@ def calc_rautian(pressure, temperature, mass, mole_fraction, linelist, vnu, lowe
 
     dnu = (vnu[-1] - vnu[0]) / (len(vnu) - 1)
     for i in range(0, len(linelist["wavenumber"]), 1):
-        intensity = linelist["intensity"][i][0] * intensity_factor * tips_ratio * np.exp(-1.4387769 * linelist["energy"][i] / temperature) * (1 - np.exp(-1.4387769 * linelist["wavenumber"][i][0] / temperature)) / (np.exp(-1.4387769 * linelist["energy"][i] / 296.0) * (1 - np.exp(-1.4387769 * linelist["wavenumber"][i][0] / 296.0)))
+        intensity, (lorentz_width, lorentz_shift, doppler_width, narrowing), fo_lm = get_params(pressure, temperature, mass, mole_fraction, tips_ratio, intensity_factor, linelist, i, get_rautian_par)
 
         lowest_value_ = lowest_value / intensity # Absorption cross section divided by the intensity to get the lowest value needed for the profile
 
-        doppler_width = doppler.hwhm(linelist["wavenumber"][i][0], temperature, mass)
-        lorentz_width = ((linelist["self-broadening"][i][0] * ((296.0/temperature)**linelist["self-broadening_temp"][i][0]) * mole_fraction) + (linelist["foreign-broadening"][i][0] * ((296.0/temperature)**linelist["foreign-broadening_temp"][i][0]) * (1 - mole_fraction))) * pressure
-        narrowing = linelist["narrowing"][i][0] * pressure
-        shift = ((linelist["self-shift"][i][0] * mole_fraction) + (linelist["foreign-shift"][i][0] * (1 - mole_fraction))) * pressure
-        
-        lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu, dnu)
+        lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, lorentz_shift, linelist["wavenumber"][i][0], vnu)
         if calc_check:
 
-            rau = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0], doppler_width, lorentz_width, narrowing, shift, linelist["line-mixing_fo"][i][0] * pressure) * intensity
+            rau = rautian.calc_rautian(vnu[lim0:lim1], linelist["wavenumber"][i][0], doppler_width, lorentz_width, narrowing, lorentz_shift, fo_lm) * intensity
 
             sigma[lim0:lim1] += rau
 
     return sigma
-
 #-------------------------------------------------------------------------------------------------
+
 # Calculate qSDR absorption cross section using H. Tran et al's algorithm, "Efficient computation of some speed-dependent isolated line profiles", JQSRT 129 (2013) 199-203 and the corresponding erratum, JQSRT 134
 
 def calc_qsdprofile(profile : str, pressure, temperature, mass, mole_fraction, linelist, vnu, lowest_value, tips_ratio, intensity_factor):
@@ -157,74 +267,55 @@ def calc_qsdprofile(profile : str, pressure, temperature, mass, mole_fraction, l
 
     dnu = (vnu[-1] - vnu[0]) / (len(vnu) - 1)
     for i in range(0, len(linelist["wavenumber"]), 1):
-        intensity = linelist["intensity"][i][0] * intensity_factor * tips_ratio * np.exp(-1.4387769 * linelist["energy"][i] / temperature) * (1 - np.exp(-1.4387769 * linelist["wavenumber"][i][0] / temperature)) / (np.exp(-1.4387769 * linelist["energy"][i] / 296.0) * (1 - np.exp(-1.4387769 * linelist["wavenumber"][i][0] / 296.0)))
+        intensity, (lorentz_width, lorentz_shift, doppler_width), fo_lm = get_params(pressure, temperature, mass, mole_fraction, tips_ratio, intensity_factor, linelist, i, get_voigt_par)
 
         lowest_value_ = lowest_value / intensity # Absorption cross section divided by the intensity to get the lowest value needed for the profile
 
-        doppler_width = doppler.hwhm(linelist["wavenumber"][i][0], temperature, mass)
-        lorentz_width = ((linelist["self-broadening"][i][0] * ((296.0/temperature)**linelist["self-broadening_temp"][i][0]) * mole_fraction) + (linelist["foreign-broadening"][i][0] * ((296.0/temperature)**linelist["foreign-broadening_temp"][i][0]) * (1 - mole_fraction))) * pressure
-        narrowing = 0.0
-        if "narrowing" in linelist:
-            narrowing = linelist["narrowing"][i][0] * pressure
-        narrowing_i = 0.0
-        correlation_HT = 0.0
-        if "narrowing_i" in linelist:
-            narrowing_i = linelist["narrowing_i"][i][0] * pressure
-        elif "correlation_HT" in linelist:
-            correlation_HT = linelist["narrowing_i"][i][0] * pressure
-        sd_width = linelist["SD-broadening"][i][0] * lorentz_width
-        shift = ((linelist["self-shift"][i][0] * mole_fraction) + (linelist["foreign-shift"][i][0] * (1 - mole_fraction))) * pressure
-        sd_shift = linelist["SD-shift"][i][0] * shift
         LS_qSDV_R = 0.0
         LS_qSDV_I = 0.0
 
-        lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu, dnu)
+        lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, lorentz_shift, linelist["wavenumber"][i][0], vnu)
 
         if calc_check:
+            sd_width, sd_shift = get_qsd_lorentz_par_only(pressure, temperature, mass, mole_fraction, linelist, i)
             if profile == "qsd_voigt":
-                line_ri = [qSDV.qsdv(linelist["wavenumber"][i][0], doppler_width, lorentz_width, sd_width, shift, sd_shift, vnu[j], LS_qSDV_R, LS_qSDV_I) for j in range(lim0, lim1, 1)]
+                line_ri = [qSDV.qsdv(linelist["wavenumber"][i][0], doppler_width, lorentz_width, sd_width, lorentz_shift, sd_shift, vnu[j], LS_qSDV_R, LS_qSDV_I) for j in range(lim0, lim1, 1)]
             if profile in ["qsd_rautian", "qsd_nelkin-ghatak"]:
-                line_ri = [qSDHC.qsdhc(linelist["wavenumber"][i][0], doppler_width, lorentz_width, sd_width, shift, sd_shift, narrowing, vnu[j], LS_qSDV_R, LS_qSDV_I) for j in range(lim0, lim1, 1)]
+                narrowing = get_narrowing(pressure, temperature, mass, mole_fraction, linelist, i)
+                line_ri = [qSDHC.qsdhc(linelist["wavenumber"][i][0], doppler_width, lorentz_width, sd_width, lorentz_shift, sd_shift, narrowing, vnu[j], LS_qSDV_R, LS_qSDV_I) for j in range(lim0, lim1, 1)]
             elif profile == "modified_hartmann-tran":
+                narrowing = get_narrowing(pressure, temperature, mass, mole_fraction, linelist, i)
+                narrowing_i = get_narrowing_i(pressure, temperature, mass, mole_fraction, linelist, i)
                 narrowing = narrowing + (1j * narrowing_i)
-                line_ri = [qSDHC.qsdhc(linelist["wavenumber"][i][0], doppler_width, lorentz_width, sd_width, shift, sd_shift, narrowing, vnu[j], LS_qSDV_R, LS_qSDV_I) for j in range(lim0, lim1, 1)]
+                line_ri = [mHT.qsdhc(linelist["wavenumber"][i][0], doppler_width, lorentz_width, sd_width, lorentz_shift, sd_shift, narrowing, vnu[j], LS_qSDV_R, LS_qSDV_I) for j in range(lim0, lim1, 1)]
             elif profile == "hartmann-tran":
-                line_ri = [pCqSDHC.pcqsdhc(linelist["wavenumber"][i][0], doppler_width, lorentz_width, sd_width, shift, sd_shift, narrowing, correlation_HT, vnu[j], LS_qSDV_R, LS_qSDV_I) for j in range(lim0, lim1, 1)]
+                narrowing = get_narrowing(pressure, temperature, mass, mole_fraction, linelist, i)
+                sd_width, sd_shift, doppler_width, narrowing, correlation_HT = get_hartmann_tran_par(pressure, temperature, mass, mole_fraction, linelist, i)
+                line_ri = [pCqSDHC.pcqsdhc(linelist["wavenumber"][i][0], doppler_width, lorentz_width, sd_width, lorentz_shift, sd_shift, narrowing, correlation_HT, vnu[j], LS_qSDV_R, LS_qSDV_I) for j in range(lim0, lim1, 1)]
 
-            sigma[lim0:lim1] += np.array([(j[0] - (pressure * linelist["line-mixing_fo"][i][0] * j[1])) * intensity for j in line_ri])
+            sigma[lim0:lim1] += np.array([(j[0] - (fo_lm * j[1])) * intensity for j in line_ri])
 
     return sigma
+#---------------------------------------------------------------------------------------------------
 
-#-------------------------------------------------------------------------------------------------
-# Calculate hard collision absorption cross section using relaxation matrix
+# Calculate hard collision absorption cross section using relaxation matrix ------------------------
 
 def calc_nosd_mat(pressure, temperature, mass, mole_fraction, linelist, offdiag, tips, vnu, lowest_value, profile, tips_ratio, intensity_factor):
-
-    lorentz_width = ((linelist["self-broadening"][0][0] * ((296.0/temperature)**linelist["self-broadening_temp"][0][0]) * mole_fraction) + (linelist["foreign-broadening"][0][0] * ((296.0/temperature)**linelist["foreign-broadening_temp"][0][0]) * (1 - mole_fraction))) * pressure
-    dnu = ((vnu[-1] - vnu[0]) / (len(vnu) - 1))
-    interp = 1
-    #if dnu > lorentz_width / 10 : # if dnu is bigger than 0.1 lorentzian width
-    #    interp = (dnu / (lorentz_width/10))
-    #    print(interp)
-    nvnu = np.linspace(vnu[0], vnu[-1], int(len(vnu) / interp))
 
     c2_constant = 1.438776877 # cm K
 
     # Diagonal matrices containing the line positions and the narrowing coefficients
     nu0 = np.diag([(i[0]) for i in linelist["wavenumber"]])
     n_nu0 = len(linelist["wavenumber"])
-    beta = np.diag([0.0 for i in linelist["wavenumber"]])
-    if "narrowing" in linelist:
-        beta = np.diag([i[0] for i in linelist["narrowing"]]) * pressure
 
     # Vector containing the relative populations of the inferior levels
     popu = np.array([linelist["statistical weight"][i] * np.exp(-c2_constant * linelist["energy"][i] / temperature) / tips for i in range(0, n_nu0, 1)])
     rho = np.diag(popu)
 
     # Vector X containing the square root of the line intensities divided by relative population, wavenumber, and (1-exp(-E/kT))
-    X = np.array([math.sqrt((linelist["intensity"][i][0] * intensity_factor * tips_ratio * np.exp(-1.4387769 * linelist["energy"][i] / temperature) * (1 - np.exp(-1.4387769 * linelist["wavenumber"][i][0] / temperature)) / (np.exp(-1.4387769 * linelist["energy"][i] / 296.0) * (1 - np.exp(-1.4387769 * linelist["wavenumber"][i][0] / 296.0)))) / (popu[i] * linelist["wavenumber"][i][0] * (1 - np.exp(-c2_constant * linelist["wavenumber"][i][0] / temperature)))) for i in range(0, len(linelist["intensity"]), 1)], dtype=np.double)
+    X = np.array([math.sqrt((get_intensity(pressure, temperature, mass, mole_fraction, tips_ratio, intensity_factor, linelist, i)) / (popu[i] * linelist["wavenumber"][i][0] * (1 - np.exp(-c2_constant * linelist["wavenumber"][i][0] / temperature)))) for i in range(0, len(linelist["intensity"]), 1)], dtype=np.double)
 
-    W = generate_W_nosd(mole_fraction, pressure, n_nu0, mass, linelist, offdiag, popu)
+    W = generate_W_nosd(mole_fraction, pressure, n_nu0, mass, temperature, linelist, offdiag, popu)
 
     # Diagonalize matrix
     h = nu0 - (W * 1j)
@@ -236,43 +327,46 @@ def calc_nosd_mat(pressure, temperature, mass, mole_fraction, linelist, offdiag,
     sigma2 = np.matmul(sigma2, X)
     # X being a 1D array, sigma1 and sigma2 are also 1D array
 
-    sigma = np.zeros(len(nvnu), dtype = np.double)
+    sigma = np.zeros(len(vnu), dtype = np.double)
 
 
     for i in range(0, len(linelist["wavenumber"]), 1):
-        lowest_value_ = lowest_value / linelist["intensity"][i][0] # Absorption cross section divided by the intensity to get the lowest value needed for the profile
+        intensity, (lorentz_width, lorentz_shift, doppler_width), fo_lm = get_params(pressure, temperature, mass, mole_fraction, tips_ratio, intensity_factor, linelist, i, get_voigt_par)
+        lowest_value_ = lowest_value / intensity # Absorption cross section divided by the intensity to get the lowest value needed for the profile
 
-        doppler_width = doppler.hwhm(linelist["wavenumber"][i][0], temperature, mass)
-        lorentz_width = ((linelist["self-broadening"][i][0] * ((296.0/temperature)**linelist["self-broadening_temp"][i][0]) * mole_fraction) + (linelist["foreign-broadening"][i][0] * ((296.0/temperature)**linelist["foreign-broadening_temp"][i][0]) * (1 - mole_fraction))) * pressure
-        shift = ((linelist["self-shift"][i][0] * mole_fraction) + (linelist["foreign-shift"][i][0] * (1 - mole_fraction))) * pressure
         if profile == "rautian":
-            narrowing = linelist["narrowing"][i][0] * pressure
+            narrowing = get_narrowing(pressure, temperature, mass, mole_fraction, linelist, i)
         else:
             narrowing = 0.0
         
-        lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], nvnu, dnu)
+        lim0, lim1, calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, lorentz_shift, linelist["wavenumber"][i][0], vnu)
+        if (lim1 - lim0) % 2 == 0:
+            if len(vnu) > lim1 + 1:
+                lim1 += 1
+            else:
+                lim1 -= 1
+
         if calc_check:
-            nu0mid = (nvnu[lim0] + nvnu[lim1-1])/2
+            nu0mid = (vnu[lim0] + vnu[lim1-1])/2
 
-            rau = rautian.calc_rautian(nvnu[lim0:lim1], nu0mid, doppler_width, 0.0, narrowing, 0.0, 0.0)
-            if len(rau) % 2 == 0:
-                rau = np.delete(rau, len(rau)-1)
+            rau = rautian.calc_rautian(vnu[lim0:lim1], nu0mid, doppler_width, 0.0, narrowing, 0.0, 0.0)
 
-            sigma_temp = -(((sigma1[i] * sigma2[i])/(nvnu[lim0:lim1] - eival[i])).imag)
-            sigma_temp *= nvnu[lim0:lim1] * (1 - np.exp(-c2_constant * nvnu[lim0:lim1] / temperature))
+            sigma_temp = -(((sigma1[i] * sigma2[i])/(vnu[lim0:lim1] - eival[i])).imag)
+            sigma_temp *= vnu[lim0:lim1] * (1 - np.exp(-c2_constant * vnu[lim0:lim1] / temperature))
             if profile != "lorentz":
-                sigma_temp = np.concatenate(([0.0]*int(len(rau)/2), sigma_temp), axis = None)
-                sigma_temp = np.concatenate((sigma_temp, [0.0]*int(len(rau)/2)), axis = None)
-                sigma[lim0:lim1] += signal.fftconvolve(sigma_temp, rau, mode = "valid") * ((nvnu[-1] - nvnu[0]) / (len(nvnu) - 1))
+                sigma_temp = np.concatenate(([sigma_temp[0]]*int(len(rau)/2), sigma_temp), axis = None)
+                sigma_temp = np.concatenate((sigma_temp, [sigma_temp[-1]]*int(len(rau)/2)), axis = None)
+                conv = signal.fftconvolve(sigma_temp, rau, mode = "valid") * ((vnu[-1] - vnu[0]) / (len(vnu) - 1))
+                sigma[lim0:lim1] += signal.fftconvolve(sigma_temp, rau, mode = "valid") * ((vnu[-1] - vnu[0]) / (len(vnu) - 1))
+            else:
+                sigma[lim0:lim1] += sigma_temp
 
-    interplot = interpolate.interp1d(nvnu, sigma, kind = "cubic")
-    sigma = interplot(vnu)
     sigma /= np.pi
 
     return sigma
+#---------------------------------------------------------------------------------------------------
 
-#-------------------------------------------------------------------------------------------------
-# Calculate uncorrelated speed-dependent (+ narrowing) absorption cross section using relaxation matrix
+# Calculate speed-dependent absorption cross section using relaxation matrix -----------------------
 
 def calc_sd_mat(profile : str, pressure, temperature, mass, mass_p, mole_fraction, linelist, offdiag, tips, vnu, lowest_value, method, tips_ratio, intensity_factor):
 
@@ -298,33 +392,31 @@ def calc_sd_mat(profile : str, pressure, temperature, mass, mass_p, mole_fractio
     rho = np.diag(popu)
 
     # Vector X containing the square root of the line intensities divided by relative population, wavenumber, and (1-exp(-E/kT))
-    X = np.array([math.sqrt((linelist["intensity"][i][0] * intensity_factor * tips_ratio * np.exp(-1.4387769 * linelist["energy"][i] / temperature) * (1 - np.exp(-1.4387769 * linelist["wavenumber"][i][0] / temperature)) / (np.exp(-1.4387769 * linelist["energy"][i] / 296.0) * (1 - np.exp(-1.4387769 * linelist["wavenumber"][i][0] / 296.0)))) / (popu[i] * linelist["wavenumber"][i][0] * (1 - np.exp(-c2_constant * linelist["wavenumber"][i][0] / temperature)))) for i in range(0, len(linelist["intensity"]), 1)], dtype=np.double)
+    X = np.array([math.sqrt((get_intensity(pressure, temperature, mass, mole_fraction, tips_ratio, intensity_factor, linelist, i)) / (popu[i] * linelist["wavenumber"][i][0] * (1 - np.exp(-c2_constant * linelist["wavenumber"][i][0] / temperature)))) for i in range(0, len(linelist["intensity"]), 1)], dtype=np.double)
 
 
     # The absorption coefficient is computed according to Eq. 21, i.e. assuming a speed-dependent Rautian profile with line mixing.
     # The elements involved in it are created here below, for each wavenumber
     if method == "general":
-        W = generate_W(mole_fraction, pressure, n_nu0, mass, mass_p, linelist, offdiag, popu, v/vp)
+        W = generate_W(mole_fraction, pressure, n_nu0, mass, mass_p, temperature, linelist, offdiag, popu, v/vp)
     elif method == "correlation":
-        W, C = generate_W_diag(mole_fraction, pressure, n_nu0, mass, mass_p, linelist, offdiag, popu, v/vp)
+        W, C = generate_W_diag(mole_fraction, pressure, n_nu0, mass, mass_p, temperature, linelist, offdiag, popu, v/vp)
 
     sigma = np.zeros(len(vnu), dtype = np.double)
     lims = [[0.0, 0.0] for i in range(0, len(linelist["wavenumber"]), 1)]
     dnu = ((vnu[-1] - vnu[0]) / (len(vnu) - 1))
     for i in range(0, len(linelist["wavenumber"]), 1):
-        lowest_value_ = lowest_value / linelist["intensity"][i][0] # Absorption cross section divided by the intensity to get the lowest value needed for the profile
+        intensity, (lorentz_width, lorentz_shift, doppler_width), fo_lm = get_params(pressure, temperature, mass, mole_fraction, tips_ratio, intensity_factor, linelist, i, get_voigt_par)
+        lowest_value_ = lowest_value / intensity # Absorption cross section divided by the intensity to get the lowest value needed for the profile
 
-        doppler_width = doppler.hwhm(linelist["wavenumber"][i][0], temperature, mass)
-        lorentz_width = ((linelist["self-broadening"][i][0] * ((296.0/temperature)**linelist["self-broadening_temp"][i][0]) * mole_fraction) + (linelist["foreign-broadening"][i][0] * ((296.0/temperature)**linelist["foreign-broadening_temp"][i][0]) * (1 - mole_fraction))) * pressure
         if lorentz_width < 0.0008:
-            print("Lorentz width too small -> switching to first order")
-            Y = get_Y(W, X, nu0, pressure)
+            #print("Lorentz width too small -> switching to first order")
+            Y = get_Y(W[0], X, nu0, pressure)
             for j in range(0, len(linelist["line-mixing_fo"]), 1):
                 linelist["line-mixing_fo"][j] = (Y[j], 0.0, False)
             return calc_qsdprofile(profile, pressure, temperature, mass, mole_fraction, linelist, vnu, lowest_value, tips_ratio, intensity_factor)
-        shift = ((linelist["self-shift"][i][0] * mole_fraction) + (linelist["foreign-shift"][i][0] * (1 - mole_fraction))) * pressure
 
-        lims[i][0], lims[i][1], calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, shift, linelist["wavenumber"][i][0], vnu, dnu)
+        lims[i][0], lims[i][1], calc_check = calc_lims(lowest_value_, doppler_width, lorentz_width, lorentz_shift, linelist["wavenumber"][i][0], vnu)
 
     lim0 = min(np.array(lims)[:,0])
     lim1 = max(np.array(lims)[:,1])
@@ -334,19 +426,22 @@ def calc_sd_mat(profile : str, pressure, temperature, mass, mass_p, mole_fractio
 
     if method == "general":
         if profile in ["qsd_rautian", "qsd_nelkin-ghatak"]:
-            beta = np.diag([i[0] for i in linelist["narrowing"]]) * pressure
+            beta = np.diag([get_narrowing(pressure, temperature, mass, mole_fraction, linelist, i) for i in range(0, len(linelist["narrowing"]), 1)])
             sigma[lim0:lim1] += calc_g.calc_abs_diag(vnu[lim0:lim1], v, mu, vp, nu0, beta, rho, X, W, temperature)
         elif profile == "modified_hartmann-tran":
-            beta = np.diag([linelist["narrowing"][i][0] + (1j * linelist["narrowing_i"][i][0]) for i in range(0, len(linelist["narrowing"]), 1)])
+            beta = np.diag([get_narrowing(pressure, temperature, mass, mole_fraction, linelist, i) + (1j * get_narrowing_i(pressure, temperature, mass, mole_fraction, linelist, i)) for i in range(0, len(linelist["narrowing"]), 1)])
             sigma[lim0:lim1] += calc_g.calc_abs_diag(vnu[lim0:lim1], v, mu, vp, nu0, beta, rho, X, W, temperature)
         elif profile == "hartmann-tran":
-            beta = [np.diag([linelist["narrowing"][i][0] - (linelist["correlation_HT"] * W[j][i][i]) for i in range(0, len(linelist["narrowing"]), 1)]) * pressure for j in range(0, len(W), 1)]
+            beta = [np.diag([get_narrowing(pressure, temperature, mass, mole_fraction, linelist, i) - (linelist["correlation_HT"] * W[j][i][i]) for i in range(0, len(linelist["narrowing"]), 1)]) * pressure for j in range(0, len(W), 1)]
             sigma[lim0:lim1] += calc_g.calc_abs_diag_ht(vnu[lim0:lim1], v, mu, vp, nu0, beta, rho, X, W, temperature)
         else:
             sigma[lim0:lim1] += calc_g.calc_abs_diag(vnu[lim0:lim1], v, mu, vp, nu0, beta, rho, X, W, temperature)
     if method == "correlation":
         if profile in ["qsd_rautian", "qsd_nelkin-ghatak"]:
-            beta = np.diag([i[0] for i in linelist["narrowing"]]) * pressure
+            beta = np.diag([get_narrowing(pressure, temperature, mass, mole_fraction, linelist, i) for i in range(0, len(linelist["narrowing"]), 1)])
+            sigma[lim0:lim1] += calc_g.calc_abs_corr(vnu[lim0:lim1], v, mu, vp, nu0, beta, rho, X, C, W, temperature)
+        elif profile == "modified_hartmann-tran":
+            beta = np.diag([get_narrowing(pressure, temperature, mass, mole_fraction, linelist, i) + (1j * get_narrowing_i(pressure, temperature, mass, mole_fraction, linelist, i)) for i in range(0, len(linelist["narrowing"]), 1)])
             sigma[lim0:lim1] += calc_g.calc_abs_corr(vnu[lim0:lim1], v, mu, vp, nu0, beta, rho, X, C, W, temperature)
         else:
             sigma[lim0:lim1] += calc_g.calc_abs_corr(vnu[lim0:lim1], v, mu, vp, nu0, beta, rho, X, C, W, temperature)
@@ -387,8 +482,17 @@ def calc_spectrum(spectral_data, spectrum_index, linelists, offdiags, nu, apply_
         if j % spectral_data["spectra"][spectrum_index]["downsample_factor"] == 0:
             lnu = j
 
+    if spectral_data["spectra"][spectrum_index]["downsample_factor"] != 1:
+        pass    # Will redo with interp1d
+        #inter = np.fft.irfft(alpha)
+        #inter = np.concatenate((inter[:int(len(inter)/2)], [0]* (((lnu+1) - len(nu)) * 2), inter[int(len(inter)/2):]), axis = None)
+        #alpha = np.fft.rfft(inter).real
+        #if len(alpha) != len(nu) - 1:
+        #    alpha = np.append(alpha, [alpha[-1]] * (len(nu) - len(alpha)), axis = None)
+
+
+    dnu = ((nu[-1] - nu[0]) / (len(nu) - 1))
     if apply_xcal:
-        nu_inter = (nu[-1] - nu[0] / (len(nu) - 1))
         nnu = [i * (1 - spectral_data["calculation"]["x_calibration_factor"]) for i in nu]
         nu = np.array(nnu)
         del nnu
@@ -401,14 +505,6 @@ def calc_spectrum(spectral_data, spectrum_index, linelists, offdiags, nu, apply_
 
         if linelists[j] != []:
             alpha += calc_alpha(spectral_data["calculation"]["line_profile"], spectral_data["spectra"][spectrum_index], spectral_data["linelists"][j], linelists[j][-1], j, nu)
-
-
-    if spectral_data["spectra"][spectrum_index]["downsample_factor"] != 1:
-        inter = np.fft.irfft(alpha)
-        inter = np.concatenate((inter[:int(len(inter)/2)], [0]* (((lnu+1) - len(nu)) * 2), inter[int(len(inter)/2):]), axis = None)
-        alpha = np.fft.rfft(inter).real
-        if len(alpha) != len(nu) - 1:
-            alpha = np.append(alpha, [alpha[-1]] * (len(nu) - len(alpha)), axis = None)
 
 
     if spectrum_form == "absorption_coefficient":
@@ -432,7 +528,7 @@ def calc_spectrum(spectral_data, spectrum_index, linelists, offdiags, nu, apply_
             ils = get_ILS(spectral_data["spectra"][spectrum_index]["ils_type"][1], nu[int(nu.size / 2)], nu)
             transmittance = np.concatenate(([transmittance[0]]*int(len(ils)/2), transmittance), axis = None)
             transmittance = np.concatenate((transmittance, [transmittance[-1]]*int(len(ils)/2)), axis = None)
-            transmittance = signal.fftconvolve(transmittance, ils, mode = "valid") * ((nu[-1] - nu[0]) / (len(nu) - 1))
+            transmittance = signal.fftconvolve(transmittance, ils, mode = "valid") * dnu
 
         transmittance *= calc_baseline(spectral_data["spectra"][spectrum_index]["baseline"], nu)
 
@@ -443,7 +539,7 @@ def calc_spectrum(spectral_data, spectrum_index, linelists, offdiags, nu, apply_
 # Create W matrix
 
 # Speed-independent relaxation matrix
-def generate_W_nosd(molfrac, press, n_nu0, m, linelist, offdiag, popu):
+def generate_W_nosd(molfrac, press, n_nu0, m, temperature, linelist, offdiag, popu):
 
     # Loop over (N(N+1))/2 to create relaxation matrix elements (row(i) and column(i)
     # then rown(i+1) and column(i+1) minus the elements of the previous rows and columns)
@@ -453,11 +549,8 @@ def generate_W_nosd(molfrac, press, n_nu0, m, linelist, offdiag, popu):
     W = np.zeros((n_nu0, n_nu0), dtype = np.cdouble)
     for i in range(n_nu0):
         # self-broadening(v) + i self-shift(v) + foreign-broadening(v) + i foreign-shift(v)
-        b_self = linelist["self-broadening"][i][0]
-        d_self = linelist["self-shift"][i][0]
-        b_other = linelist["foreign-broadening"][i][0]
-        d_other = linelist["foreign-shift"][i][0]
-        W[i][i] = ((b_self + (d_self * 1j))*molfrac + (b_other + (d_other * 1j))*(1 - molfrac)) * press
+        lorentz_width, lorentz_shift = get_lorentz_par(press, temperature, m, molfrac, linelist, i)
+        W[i][i] = lorentz_width + (lorentz_shift * 1j)
         for j in range(i+1, n_nu0):
             # check if upper triangle element (ij) exists in offdiag
             if "{} {}".format(linelist["name"][i], linelist["name"][j]) in offdiag["names"]:
@@ -471,7 +564,7 @@ def generate_W_nosd(molfrac, press, n_nu0, m, linelist, offdiag, popu):
     return W
 
 # Speed-dependent relaxation matrix
-def generate_W(molfrac, press, n_nu0, m, mp, linelist, offdiag, popu, u, sdkind = "quadratic") :
+def generate_W(molfrac, press, n_nu0, m, mp, temperature, linelist, offdiag, popu, u, sdkind = "quadratic") :
 
     # Loop over (N(N+1))/2 to create relaxation matrix elements (row(i) and column(i)
     # then rown(i+1) and column(i+1) minus the elements of the previous rows and columns)
@@ -480,27 +573,23 @@ def generate_W(molfrac, press, n_nu0, m, mp, linelist, offdiag, popu, u, sdkind 
     #   i2  21  22
     W = np.zeros((n_nu0, n_nu0, len(u)), dtype = np.cdouble)
     for i in range(n_nu0) :
-        # self-broadening(v) + i self-shift(v) + foreign-broadening(v) + i foreign-shift(v)
-        b_self = sd.sdpar(linelist["self-broadening"][i][0], u, m, m, sdkind, dpp0 = linelist["SD-broadening"][i][0])
-        d_self = sd.sdpar(linelist["self-shift"][i][0], u, m, m, sdkind, dpp0 = linelist["SD-shift"][i][0])
-        b_other = sd.sdpar(linelist["foreign-broadening"][i][0], u, m, mp, sdkind, dpp0 = linelist["SD-broadening"][i][0])
-        d_other = sd.sdpar(linelist["foreign-shift"][i][0], u, m, mp, sdkind, dpp0 = linelist["SD-shift"][i][0])
-        W[i][i] = ((b_self + d_self * 1j)*molfrac + (b_other + d_other * 1j)*(1 - molfrac)) * press
+        sd_width, sd_shift = get_qsd_lorentz_par(press, temperature, m, molfrac, linelist, i)
+        W[i][i] = sd_width + (sd_shift * 1j)
         for j in range(i+1, n_nu0) :
             # check if upper triangle element (ij) exists in offdiag
             if "{} {}".format(linelist["name"][i], linelist["name"][j]) in offdiag["names"]:
-                W[i,j] = offdiag["line-mixing"][offdiag["names"].index("{} {}".format(linelist["name"][i], linelist["name"][j]))][0] * press * (-1)                    # upper triangle
-                W[j,i] = offdiag["line-mixing"][offdiag["names"].index("{} {}".format(linelist["name"][i], linelist["name"][j]))][0] * press * (-1) * popu[j]/popu[i]  # lower triangle: Wji = Wij rhoj/rhoi
+                W[i,j] = get_line_mixing(press, temperature, m, molfrac, offdiag, offdiag["names"].index("{} {}".format(linelist["name"][i], linelist["name"][j]))) * (-1)                    # upper triangle
+                W[j,i] = get_line_mixing(press, temperature, m, molfrac, offdiag, offdiag["names"].index("{} {}".format(linelist["name"][i], linelist["name"][j]))) * (-1) * popu[j]/popu[i]  # lower triangle: Wji = Wij rhoj/rhoi
             # check if lower triangle element (ji) exists in offdiag
             elif "{} {}".format(linelist["name"][j], linelist["name"][i]) in offdiag["names"] :
-                W[i,j] = offdiag["line-mixing"][offdiag["names"].index("{} {}".format(linelist["name"][j], linelist["name"][i]))][0] * press * (-1) * popu[i]/popu[j]  # upper triangle
-                W[j,i] = offdiag["line-mixing"][offdiag["names"].index("{} {}".format(linelist["name"][j], linelist["name"][i]))][0] * press * (-1)                    # lower triangle
+                W[i,j] = get_line_mixing(press, temperature, m, molfrac, offdiag, offdiag["names"].index("{} {}".format(linelist["name"][j], linelist["name"][i]))) * (-1) * popu[i]/popu[j]  # upper triangle
+                W[j,i] = get_line_mixing(press, temperature, m, molfrac, offdiag, offdiag["names"].index("{} {}".format(linelist["name"][j], linelist["name"][i]))) * (-1)                    # lower triangle
 
     return W.transpose(2, 0, 1)
 
 
 # Diagonal relaxation matrix + correlation matrix
-def generate_W_diag(molfrac, press, n_nu0, m, mp, linelist, offdiag, popu, u, sdkind = "quadratic") :
+def generate_W_diag(molfrac, press, n_nu0, m, mp, temperature, linelist, offdiag, popu, u, sdkind = "quadratic") :
 
     # Loop over (N(N+1))/2 to create relaxation matrix elements (row(i) and column(i)
     # then rown(i+1) and column(i+1) minus the elements of the previous rows and columns)
@@ -510,12 +599,8 @@ def generate_W_diag(molfrac, press, n_nu0, m, mp, linelist, offdiag, popu, u, sd
     W = np.zeros((n_nu0, n_nu0, len(u)), dtype = np.cdouble)
     C = np.zeros((n_nu0, n_nu0), dtype = np.cdouble)
     for i in range(n_nu0) :
-        # self-broadening(v) + i self-shift(v) + foreign-broadening(v) + i foreign-shift(v)
-        b_self = sd.sdpar(linelist["self-broadening"][i][0], u, m, m, sdkind, dpp0 = linelist["SD-broadening"][i][0])
-        d_self = sd.sdpar(linelist["self-shift"][i][0], u, m, m, sdkind, dpp0 = linelist["SD-shift"][i][0])
-        b_other = sd.sdpar(linelist["foreign-broadening"][i][0], u, m, mp, sdkind, dpp0 = linelist["SD-broadening"][i][0])
-        d_other = sd.sdpar(linelist["foreign-shift"][i][0], u, m, mp, sdkind, dpp0 = linelist["SD-shift"][i][0])
-        W[i][i] = ((b_self + d_self * 1j)*molfrac + (b_other + d_other * 1j)*(1 - molfrac)) * press
+        sd_width, sd_shift = get_qsd_lorentz_par(press, temperature, m, molfrac, linelist, i)
+        W[i][i] = sd_width + (sd_shift * 1j)
 
         for j in range(i+1, n_nu0) :
             # check if upper triangle element (ij) exists in offdiag
@@ -534,7 +619,7 @@ def generate_W_diag(molfrac, press, n_nu0, m, mp, linelist, offdiag, popu, u, sd
 def get_Y(W, X, nu0, press):
     Y = np.zeros(len(X), dtype = np.double)
     for i in range(0, len(X), 1):
-        Y[i] = 2 * np.sum([(X[j]/X[i]) * (W[j][i] / (nu0[i] - nu0[j])) for j in range(0, len(W[i]), 1) if j != i]).real / press
+        Y[i] = 2 * np.sum([(X[j]/X[i]) * (W[j][i] / (nu0[i][i] - nu0[j][j])) for j in range(0, len(W[i]), 1) if j != i]).real / press
     return Y
 
 
@@ -683,9 +768,7 @@ def calc_ILS_time(ils_file, nu0, nu, par):
         elif nu[i] <= -nu_max + (wavelength / 2):
             ils[i] *= (np.cos((2 * np.pi * nu[i] / wavelength) +  ((nu_max - (wavelength / 2)) * 2 * np.pi / wavelength)) + 1)/2
 
-    area = 0
-    for i in range(0, len(nu)-1, 1):
-        area += (ils[i] + ils[i+1]).real * nu_inter / 2
+    area = integrate.simpson(ils.real, dx = nu_inter)
     ils /= area
 
 

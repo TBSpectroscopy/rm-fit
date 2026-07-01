@@ -55,7 +55,7 @@ def get_rel_y(params_id : list, params : list, linelists, offdiags, method, opti
     for i in range(0, len(y), 1):
         for j in range(0, len(y[i]), 1):
             for k in range(0, len(y[i][j]), 1):
-                if method == "first-order" or offdiags[params_id[y[i][j][k]][0]][params_id[y[i][j][k]][1]] == {} or offdiags[params_id[y[i][j][k]][0]][params_id[y[i][j][k]][1]] == []:
+                if method == "first-order" or offdiags[params_id[y[i][j][k]][0]] == [] or offdiags[params_id[y[i][j][k]][0]][params_id[y[i][j][k]][1]] == {}:
                     if k == int(len(y[i][j])/2):
                         rel_y[i][j] = params_id[y[i][j][k]]
                         del_y.append(y[i][j][k])
@@ -159,8 +159,12 @@ def fit_spectra(params, specs, params_id, ns, spectral_data, linelists, offdiags
 
         par_prob = []
         hessian_inv = get_hessian_inv(jacobian, params_id, results.x, par_prob)
+        for i in range(0, len(hessian_inv), 1):
+            if hessian_inv[i][i] < 0.0:
+                hessian_inv[i][i] = 0.0
 
         main_diag = np.diagonal(hessian_inv)
+
         sqrt_main_diag = np.sqrt(main_diag)
         unc = stdev*sqrt_main_diag
 

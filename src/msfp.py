@@ -96,6 +96,7 @@ def msfp(control_file, option):
         for i in range(0, len(spectral_data["spectra"]), 1):
             lims = spectral_data["spectra"][i]["delimitations"]
             calib = calc.calibrate_spectrum(specs[0][lims[0] : lims[1]], specs[1][lims[0] : lims[1]], spectral_data["calculation"]["x_calibration_factor"])
+            spectral_data["spectra"][i]["delimitations"] = [len(spec_calib[0]), len(spec_calib[0]) + len(calib[0])]
             spec_calib[0] = np.concatenate((spec_calib[0], calib[0]), axis = None)
             spec_calib[1] = np.concatenate((spec_calib[1], calib[1]), axis = None)
         del specs
@@ -124,17 +125,18 @@ def msfp(control_file, option):
         for i in range(0, len(spectral_data["spectra"]), 1):
             lims = spectral_data["spectra"][i]["delimitations"]
             calib = calc.calibrate_spectrum(specs[0][lims[0] : lims[1]], specs[1][lims[0] : lims[1]], spectral_data["calculation"]["x_calibration_factor"])
+            spectral_data["spectra"][i]["delimitations"] = [len(spec_calib[0]), len(spec_calib[0]) + len(calib[0])]
             spec_calib[0] = np.concatenate((spec_calib[0], calib[0]), axis = None)
             spec_calib[1] = np.concatenate((spec_calib[1], calib[1]), axis = None)
         del specs
         for i in range(0, len(spectral_data["spectra"]), 1):
-            y_calc = np.concatenate((y_calc, fit.recalc_spectrum(params, i, spec_calib, params_id, len(spectral_fit), spectral_data, linelists, offdiags, apply_xcal = False)), axis = None)
+            y_calc = np.concatenate((y_calc, fit.recalc_spectrum(params, i, spec_calib, params_id, len(spectral_fit), spectral_data, linelists, offdiags, rel_y, apply_xcal = False)), axis = None)
 
         spec_filename = "{}_spectra.txt".format(os.path.splitext(spectral_data["calculation"]["output_path"])[0])
         with open(spec_filename, "w") as f:
             count = 0
             for i in range(0, len(spec_calib[0]), 1):
-                line = "{:18.10f}{:17.7E}{:17.7E}{:17.7E}".format(spec_calib[0][i], spec_calib[1][i], y_calc[i], y_resid[i])
+                line = "{:18.10f}{:17.7E}{:17.7E}{:17.7E}".format(spec_calib[0][i], spec_calib[1][i], y_calc[i], spec_calib[1][i] - y_calc[i])
                 if i == delim[count]:
                     line = line + "   *"
                     count = min(count + 1, len(delim) - 1)

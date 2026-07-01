@@ -14,9 +14,7 @@ import sys
 import os
 
 
-def set_default_par(par, profile):
-    prof_comb = {"voigt": ["lorentz"], "rautian": ["lorentz", "narrowing"], "qsd_voigt": ["lorentz", "speed-dependence"], "qsd_rautian": ["lorentz", "speed-dependence", "narrowing"], "qsd_nelkin-ghatak": ["lorentz", "speed-dependence", "narrowing"], "hartmann-tran": ["lorentz", "speed-dependence", "narrowing", "correlation_HT"], "modified_hartmann-tran": ["lorentz", "speed-dependence", "narrowing", "correlation"]}
-    par_prof = {"essentials": ["wavenumber", "intensity"], "general": ["name", "statistical weight", "energy"], "lorentz": ["self-broadening", "foreign-broadening", "self-shift", "foreign-shift", "line-mixing_fo", "self-broadening_temp", "foreign-broadening_temp"], "narrowing": ["narrowing"], "speed-dependence": ["SD-broadening", "SD-shift"], "correlation": ["narrowing_i"], "correlation_HT": ["correlation_HT"]}
+def set_default_par(par, profile, prof_comb, par_prof, others, parpos):
 
     for i in par_prof["essentials"]:
         if not i in par:
@@ -28,11 +26,20 @@ def set_default_par(par, profile):
         sys.exit()
     elif not "name" in par:
         par["name"] = ["" for k in par["wavenumber"]]
-
+    
+    keys = []
     for i in prof_comb[profile]:
-        for j in par_prof[i]:
-            if not j in par:
-                par[j] = [(0.0, False, 0.0) for k in par["wavenumber"]]
+        keys.extend(par_prof[i])
+    for j in keys:
+        if not j in par:
+            par[j] = [(0.0, False, 0.0) for k in par["wavenumber"]]
+    keys.extend(others)
+    keys.extend(par_prof["essentials"])
+    par_keys = list(par.keys())
+    for key in par_keys:
+        if not key in keys:
+            del par[key]
+            del parpos[key]
 
     return
 
@@ -44,6 +51,9 @@ def get_lines(linelist_file, spec_range, profile):
     parpos = dict()
     par = dict()
 
+    prof_comb = {"voigt": ["lorentz"], "rautian": ["lorentz", "narrowing"], "qsd_voigt": ["lorentz", "speed-dependence"], "qsd_rautian": ["lorentz", "speed-dependence", "narrowing"], "qsd_nelkin-ghatak": ["lorentz", "speed-dependence", "narrowing"], "hartmann-tran": ["lorentz", "speed-dependence", "narrowing", "correlation_HT"], "modified_hartmann-tran": ["lorentz", "speed-dependence", "narrowing", "correlation"]}
+    par_prof = {"essentials": ["wavenumber", "intensity"], "general": ["name", "statistical weight", "energy"], "lorentz": ["self-broadening", "foreign-broadening", "self-shift", "foreign-shift", "line-mixing_fo", "self-broadening_temp", "foreign-broadening_temp", "self-shift_temp", "foreign-shift_temp", "line-mixing_fo_temp"], "narrowing": ["narrowing", "narrowing_temp"], "speed-dependence": ["SD-broadening", "SD-shift", "SD-broadening_temp", "SD-shift_temp"], "correlation": ["narrowing_i", "narrowing_i_temp"], "correlation_HT": ["correlation_HT"]}
+    others = ["fit", "name", "statistical weight", "energy", "line_position"]
 
     startx = 0
     with open(linelist_file) as f:
@@ -77,12 +87,12 @@ def get_lines(linelist_file, spec_range, profile):
                         if parpos == dict():
                             print("ERROR: Format not provided in {}".format(linelist_file))
                             sys.exit()
-                        read_linelist(par, line, parpos, x)
+                        read_linelist(par, line, parpos, x, profile, prof_comb, par_prof)
     if mass <= 0.0:
         print("ERROR: absorber mass not provided in {}".format(linelist_file))
         sys.exit()
 
-    set_default_par(par, profile)
+    set_default_par(par, profile, prof_comb, par_prof, others, parpos)
 
     return par, mass, mass_perturbing, parpos
 
@@ -134,15 +144,20 @@ def get_format(form, name_width = None):   # Convert "Format" field string to ab
 
 
 
-def read_linelist(par, line, parpos, x):
+def read_linelist(par, line, parpos, x, profile, prof_comb, par_prof):
 
     fit = True
     if "fit" in parpos:
         fit = (line[parpos["fit"][0] : parpos["fit"][1]] == "*")
 
+    keys = []
+    for i in prof_comb[profile]:
+        keys.extend(par_prof[i])
+    keys.extend(par_prof["essentials"])
+
     for key in par.keys():
         if key != "line_position":
-            if key in ["wavenumber", "intensity", "self-broadening", "foreign-broadening", "self-shift", "foreign-shift", "line-mixing_fo", "narrowing", "SD-broadening", "SD-shift", "foreign-broadening_temp", "self-broadening_temp", "narrowing_i", "correlation_HT"]:
+            if key in keys:
                 if len(parpos[key]) == 3:
                     par[key].append((float(line[parpos[key][0] : parpos[key][1]]), False, 0.0))
                 elif len(parpos[key]) == 6:
@@ -159,7 +174,10 @@ def read_linelist(par, line, parpos, x):
 
 
 def get_offdiag(offdiag_list, names):
-    offdiag = {"names": [], "line-mixing": []}
+    keys = ["line-mixing", "line-mixing_temp"]
+    offdiag = {"names": []}
+    for key in keys:
+        offdiag[key] = []
     names_used = []
     parpos = dict()
 
@@ -175,8 +193,16 @@ def get_offdiag(offdiag_list, names):
                         if len(parpos) != 0:
                             if name == line[parpos["name_1"][0] : parpos["name_1"][1]] and line[parpos["name_2"][0] : parpos["name_2"][1]] in names_used:
                                 offdiag["names"].append("{} {}".format(line[parpos["name_1"][0] : parpos["name_1"][1]], line[parpos["name_2"][0] : parpos["name_2"][1]]))
-                                if "line-mixing" in parpos and line[parpos["line-mixing"][0] : parpos["line-mixing"][1]] != "":
-                                    offdiag["line-mixing"].append((float(line[parpos["line-mixing"][0] : parpos["line-mixing"][1]]), line[parpos["line-mixing"][6] : parpos["line-mixing"][7]] == "*", float(line[parpos["line-mixing"][3] : parpos["line-mixing"][4]])))
+                                if not "line-mixing" in parpos or line[parpos["line-mixing"][0] : parpos["line-mixing"][1]].strip() == "": # Empty row for first-order line-mixing
+                                    continue
+                                for key in parpos:
+                                    if key in keys:
+                                        if len(parpos[key]) == 3:
+                                            offdiag[key].append((float(line[parpos[key][0] : parpos[key][1]]), False, 0.0))
+                                        elif len(parpos[key]) == 6:
+                                            offdiag[key].append((float(line[parpos[key][0] : parpos[key][1]]), False, float(line[parpos[key][3] : parpos[key][4]])))
+                                        else:
+                                            offdiag[key].append((float(line[parpos[key][0] : parpos[key][1]]), line[parpos[key][6] : parpos[key][7]] == "*", float(line[parpos[key][3] : parpos[key][4]])))
                 elif "Format...................:" in line and len(names_used) != 0:
                     form = line.split("..:")[1]
                     form_st = form.find("\"")
@@ -189,12 +215,19 @@ def get_offdiag(offdiag_list, names):
                 elif line.startswith("$OFF-DIAGONAL_PARAMETERS"):
                     start = True
 
+    for key in keys:
+        if key == "line-mixing":
+            continue
+        for i in offdiag["line-mixing"]:
+            offdiag[key].append((0.0, False, 0.0))
+
+
     return offdiag, parpos
 
 
 def separate_lines(offdiag, linelist, offdiag_parpos):
     names = [offdiag["names"][i] for i in range(len(offdiag["names"]) - 1, -1, -1)]
-    value = [offdiag["line-mixing"][i] for i in range(len(offdiag["line-mixing"]) - 1, -1, -1)]
+    ind = [i for i in range(len(offdiag["line-mixing"]) - 1, -1, -1)]
     namepos = []
     if len(names) != 0:
         namepos = [0, offdiag_parpos["name_1"][1] - offdiag_parpos["name_1"][0], offdiag_parpos["name_1"][1] - offdiag_parpos["name_1"][0] + 1, (2 * (offdiag_parpos["name_1"][1] - offdiag_parpos["name_1"][0])) + 1]
@@ -205,25 +238,25 @@ def separate_lines(offdiag, linelist, offdiag_parpos):
     while len(names) != 0:
         if not added: # If no line is matched, all the combinations of the block were found
             blocknames.append([names[-1][namepos[0] : namepos[1]], names[-1][namepos[2] : namepos[3]]])
-            offdiag_blocks.append({"names": [], "line-mixing": []})
+            offdiag_blocks.append({key : [] for key in offdiag})
         added = False
         for i in range(len(names)-1, -1, -1):
             if names[i][namepos[0] : namepos[1]] in blocknames[-1]:
-                offdiag_blocks[-1]["names"].append(names[i])
-                offdiag_blocks[-1]["line-mixing"].append(value[i])
+                for key in offdiag:
+                    offdiag_blocks[-1][key].append(offdiag[key][ind[i]])
                 if not names[i][namepos[2] : namepos[3]] in blocknames[-1]:
                     blocknames[-1].append(names[i][namepos[2] : namepos[3]])
                     added = True
                 del names[i]
-                del value[i]
+                del ind[i]
             elif names[i][namepos[2] : namepos[3]] in blocknames[-1]:
-                offdiag_blocks[-1]["names"].append(names[i])
-                offdiag_blocks[-1]["line-mixing"].append(value[i])
+                for key in offdiag:
+                    offdiag_blocks[-1][key].append(offdiag[key][ind[i]])
                 if not names[i][namepos[0] : namepos[1]] in blocknames[-1]:
                     blocknames[-1].append(names[i][namepos[0] : namepos[1]])
                     added = True
                 del names[i]
-                del value[i]
+                del ind[i]
 
     linelist_temp = {key:value for key, value in linelist.items()}
     for i in range(0, len(blocknames), 1):

@@ -44,7 +44,7 @@ Eigen::MatrixXcd integrate(const std::vector<Eigen::MatrixXcd> &arr, double inte
 
 
 /** Calculate the absorption cross section for given lines using matrix inversions **/
-pybind11::array_t<double> calc_abs(pybind11::array_t<double> vnu, pybind11::array_t<double> v, pybind11::array_t<double> mu, double vp, Eigen::MatrixXd nu0, Eigen::MatrixXd beta, Eigen::MatrixXd rho, Eigen::VectorXd X, std::vector<Eigen::MatrixXcd> W, double temperature)
+pybind11::array_t<double> calc_abs(pybind11::array_t<double> vnu, pybind11::array_t<double> v, pybind11::array_t<double> mu, double vp, Eigen::MatrixXd nu0, Eigen::MatrixXcd beta, Eigen::MatrixXd rho, Eigen::VectorXd X, std::vector<Eigen::MatrixXcd> W, double temperature)
 {
     int n_nu = vnu.size();
     int n_nu0 = nu0.rows();
@@ -113,7 +113,7 @@ pybind11::array_t<double> calc_abs(pybind11::array_t<double> vnu, pybind11::arra
 
 
 /** Calculate the speed-dependent absorption cross section for given lines using partial matrix diagonalization **/
-pybind11::array_t<double> calc_abs_diag(pybind11::array_t<double> vnu, pybind11::array_t<double> v, pybind11::array_t<double> mu, double vp, Eigen::MatrixXd nu0, Eigen::MatrixXd beta, Eigen::MatrixXd rho, Eigen::VectorXd X, std::vector<Eigen::MatrixXcd> W, double temperature)
+pybind11::array_t<double> calc_abs_diag(pybind11::array_t<double> vnu, pybind11::array_t<double> v, pybind11::array_t<double> mu, double vp, Eigen::MatrixXd nu0, Eigen::MatrixXcd beta, Eigen::MatrixXd rho, Eigen::VectorXd X, std::vector<Eigen::MatrixXcd> W, double temperature)
 {
     int n_nu = vnu.size();
     int n_nu0 = nu0.rows();

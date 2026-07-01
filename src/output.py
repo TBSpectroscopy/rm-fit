@@ -74,7 +74,7 @@ def write_linelists(linelist_inputs, linelist_outputs, linelists, spec_range, li
                 if linelist["line_position"][0] <= x <= linelist["line_position"][-1]:  # Uses input list and fit to write output
                     line2 = line
                     for key in linelist_formats[i].keys():
-                        if len(linelist_formats[i][key]) == 9 and linelist[key][count][1]:
+                        if len(linelist_formats[i][key]) == 9 and type(linelist[key][count]) == list and linelist[key][count][1]:
                             line2 = set_line_par(line, linelist_formats[i][key], linelist[key][count])
                             line = line2
                     count += 1
