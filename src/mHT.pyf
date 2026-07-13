@@ -15,7 +15,7 @@ python module mHT ! in
             double precision :: wr
             double precision :: wi
         end subroutine cpf3
-        subroutine qsdhc(sg0,gamd,gam0,gam2,shift0,shift2,anuvc,sg,ls_qsdhc_r,ls_qsdhc_i) ! in :qSDHC:qSDHC.for
+        subroutine qsdhc(sg0,gamd,gam0,gam2,shift0,shift2,anuvc,sg,ls_qsdhc_r,ls_qsdhc_i) ! in :qSDHC:mHT.for
             double precision,intent(in) :: sg0
             double precision,intent(in) :: gamd
             double precision,intent(in) :: gam0

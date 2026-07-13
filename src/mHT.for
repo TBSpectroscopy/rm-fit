@@ -42,7 +42,7 @@ C-------------------------------------------------
 	 double precision wr1,wi1,wr2,wi2,wrb,wib
 	 double precision SZ1,SZ2,DSZ,SZmx,SZmn
 	 double precision LS_qSDHC_R,LS_qSDHC_I
-	double complex anuVC
+	 double complex anuVC
 	double complex c0,c2,c0t,c2t
 	double complex X,Y,iz,Z1,Z2
 	double complex Aterm,LS_qSDHC
