@@ -20,12 +20,13 @@ Compilation
 -----------
 ### Dependencies
 
-- [gcc, g++](https://gcc.gnu.org/) / [clang](https://clang.llvm.org/) with C++ >= 14
-- [gfortran](https://gcc.gnu.org/fortran/)
+- [GCC, G++](https://gcc.gnu.org/) / [clang](https://clang.llvm.org/) with C++ >= 14
+- [GFortran](https://gcc.gnu.org/fortran/)
 - [CMake](https://cmake.org/)
 - [Python 3.x](https://www.python.org/)
 - [pybind11](https://github.com/pybind/pybind11)
 - [meson](https://mesonbuild.com/)
+- [Make](https://www.gnu.org/software/make/) / [Ninja](https://ninja-build.org/)
 - [NumPy](https://numpy.org/)
 - [Eigen](https://eigen.tuxfamily.org)
 
@@ -35,7 +36,14 @@ Arch Linux: Every dependencies are available through the package manager and the
 #### macOS
 Clang is available through Xcode Command Line Tools (`sudo xcode-select --install`). Everything else is available through [Homebrew](https://brew.sh/) and [pip](https://pip.pypa.io/)
 
+### Windows
+Python is available on the Microsoft Store. Numpy, pybind11, and meson are available through [pip](https://pip.pypa.io/). GCC, G++, GFortran, CMake, Make and Ninja executables are available on [WinLibs](https://winlibs.com/). Unzip the folder and add the directory to the Path environment variable "Control Panel\User Accounts\User Accounts\Change my environment variables". Eigen can either be extracted directly to the src/ directory or installed with CMake: 
+Unzip the eigen folder. Inside it, run the command `mkdir build`, `cd build`, and `cmake ..`. Finally, create a `CMAKE_PREFIX_PATH` variable inside the environment variables, and add the path of the eigen folder to it. 
+
+
 ### Instructions
+
+#### Linux & macOS
 
 1. Clone source code
     ```
@@ -66,6 +74,41 @@ OR
     ```
 
 4. Start using RM-Fit
+
+#### Windows
+
+1. Clone source code
+    ```
+    git clone https://github.com/TBSpectroscopy/rm-fit.git
+    ```
+
+2. Access the source code directory
+    ```
+    cd rm-fit\src
+    ```
+
+3. Compile the Fortran and C++ libraries
+    ```
+    python3 -m numpy.f2py -c qSDHC.pyf qSDHC.for CPF3.for CPF.for --f90flags="-Ofast"
+    python3 -m numpy.f2py -c mHT.pyf mHT.for CPF3.for CPF.for --f90flags="-Ofast"
+    python3 -m numpy.f2py -c qSDV.pyf qSDV.for CPF3.for CPF.for --f90flags="-Ofast"
+    python3 -m numpy.f2py -c pCqSDHC.pyf pCqSDHC.for CPF3.for CPF.for --f90flags="-Ofast"
+    mkdir build
+    cd build
+    cmake ..
+    ```
+
+4. If a .ninja file appeared in `build`, run
+    ```
+    ninja
+    ```
+    If a Makefile appeared in `build`, run
+    ```
+    make
+    ```
+    If a .sln file appeared, use VSCode to compile the project
+
+5. Start using RM-Fit
 
 Usage
 -----

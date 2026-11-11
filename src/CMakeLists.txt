@@ -4,13 +4,22 @@ project(calc_g)
 set (CMAKE_CXX_STANDARD 23)
 
 # Find python
-find_package(Python COMPONENTS Interpreter Development)
+find_package(Python COMPONENTS Interpreter Development REQUIRED)
+
+# Find pybind11 CMake Directory path
+execute_process(
+    COMMAND "${Python_EXECUTABLE}" -c "import pybind11; print(pybind11.get_cmake_dir())"
+    OUTPUT_VARIABLE PYBIND11_CMAKE_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+list(APPEND CMAKE_PREFIX_PATH "${PYBIND11_CMAKE_DIR}")
 
 # Find pybind11
 find_package(pybind11 REQUIRED)
 
 # Find Eigen3
-find_package(Eigen3 REQUIRED)
+find_package(Eigen3 REQUIRED NO_MODULE)
 include_directories(${EIGEN_INCLUDE_DIR})
 
 add_compile_options(
@@ -23,3 +32,7 @@ add_compile_options(
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR})
 pybind11_add_module(calc_g calc_g.cpp)
 target_link_libraries(calc_g PRIVATE Eigen3::Eigen)
+
+if(MINGW)
+    target_link_options(calc_g PRIVATE "-static-libgcc" "-static-libstdc++" "-static")
+endif()
