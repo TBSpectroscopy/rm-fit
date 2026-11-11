@@ -338,7 +338,7 @@ def get_jac_column_specs(params, i, col, y0, lims, transmittance, *args):
         x = nu[lims[params_id[i][0]][0] : lims[params_id[i][0]][1]] - ((nu[lims[params_id[i][0]][1] - 1] + nu[lims[params_id[i][0]][0]])/2)
         if spectral_data["spectra"][params_id[i][0]]["form"] == "transmittance":
             col[lims[params_id[i][0]][0] : lims[params_id[i][0]][1]] = transmittance[params_id[i][0]] * (x ** int(params_id[i][1].split()[1]))
-        elif spectral_data["spectra"][params_id[i][0]]["form"] == "absorption_coefficient":
+        elif spectral_data["spectra"][params_id[i][0]]["form"] == "absorption_coefficient" or spectral_data["spectra"][params_id[i][0]]["form"] == "absorbance" or spectral_data["spectra"][params_id[i][0]]["form"] == "optical_depth":
             col[lims[params_id[i][0]][0] : lims[params_id[i][0]][1]] = x ** int(params_id[i][1].split()[1])
     elif params_id[i][0] == None:
         if dx != 0.0:

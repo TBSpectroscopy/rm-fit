@@ -36,7 +36,7 @@ Arch Linux: Every dependencies are available through the package manager and the
 #### macOS
 Clang is available through Xcode Command Line Tools (`sudo xcode-select --install`). Everything else is available through [Homebrew](https://brew.sh/) and [pip](https://pip.pypa.io/)
 
-### Windows
+#### Windows
 Python is available on the Microsoft Store. Numpy, pybind11, and meson are available through [pip](https://pip.pypa.io/). GCC, G++, GFortran, CMake, Make and Ninja executables are available on [WinLibs](https://winlibs.com/). Unzip the folder and add the directory to the Path environment variable "Control Panel\User Accounts\User Accounts\Change my environment variables". Eigen can either be extracted directly to the src/ directory or installed with CMake: 
 Unzip the eigen folder. Inside it, run the command `mkdir build`, `cd build`, and `cmake ..`. Finally, create a `CMAKE_PREFIX_PATH` variable inside the environment variables, and add the path of the eigen folder to it. 
 

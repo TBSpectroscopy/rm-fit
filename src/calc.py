@@ -507,8 +507,18 @@ def calc_spectrum(spectral_data, spectrum_index, linelists, offdiags, nu, apply_
             alpha += calc_alpha(spectral_data["calculation"]["line_profile"], spectral_data["spectra"][spectrum_index], spectral_data["linelists"][j], linelists[j][-1], j, nu)
 
 
-    if spectrum_form == "absorption_coefficient":
+    if spectrum_form == "absorption_coefficient" or spectrum_form == "optical_depth" or spectrum_form == "absorbance":
+
+        if spectrum_form == "optical_depth":
+            optic = (alpha * spectral_data["spectra"][spectrum_index]["path_length"]) + calc_baseline(spectral_data["spectra"][spectrum_index]["baseline"], nu)
+            return optic.real
+
+        elif spectrum_form == "absorbance":
+            absorb = ((alpha * spectral_data["spectra"][spectrum_index]["path_length"]) / np.log(10.0)) + calc_baseline(spectral_data["spectra"][spectrum_index]["baseline"], nu)
+            return absorb.real
+
         alpha += calc_baseline(spectral_data["spectra"][spectrum_index]["baseline"], nu)
+
         return alpha.real
 
     elif spectrum_form == "absorption_cross-section":
@@ -531,6 +541,7 @@ def calc_spectrum(spectral_data, spectrum_index, linelists, offdiags, nu, apply_
             transmittance = signal.fftconvolve(transmittance, ils, mode = "valid") * dnu
 
         transmittance *= calc_baseline(spectral_data["spectra"][spectrum_index]["baseline"], nu)
+
 
         return transmittance.real
 
